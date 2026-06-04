@@ -227,6 +227,12 @@
   /* toolbar-row2: inline on desktop, full-width row on mobile */
   .toolbar-row2 { display: contents; }
 
+  /* Hide sidebar when on dashboard view — desktop only; mobile uses transform drawer */
+  .sb-hidden { display: none; }
+  @media (max-width: 768px) {
+    .sb-hidden { display: block; } /* let the drawer CSS (transform) control visibility instead */
+  }
+
   /* ── Mobile FAB ── */
   .fab { display: none; }
 
@@ -1211,7 +1217,8 @@ let chartInstances = {};
 function switchView(view) {
   currentView = view;
   document.getElementById('main-view').style.display = view === 'collection' ? '' : 'none';
-  document.getElementById('sidebar').style.display = view === 'collection' ? '' : 'none';
+  // Use a class rather than inline display so the mobile drawer CSS isn't overridden
+  document.getElementById('sidebar').classList.toggle('sb-hidden', view !== 'collection');
   document.getElementById('dashboard-view').classList.toggle('visible', view === 'dashboard');
   document.getElementById('tab-collection').classList.toggle('active', view === 'collection');
   document.getElementById('tab-dashboard').classList.toggle('active', view === 'dashboard');
