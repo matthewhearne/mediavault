@@ -52,8 +52,10 @@
   .stat-l { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); margin-top: 1px; }
 
   .body { flex: 1; display: flex; overflow: hidden; }
-  .sidebar { flex-shrink: 0; width: 214px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 16px 10px; }
-  .main { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  /* Sidebar is outside .app, always position:fixed — desktop sits at left edge, mobile slides in */
+  .sidebar { position: fixed; top: 98px; left: 0; bottom: 0; width: 214px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 16px 10px; z-index: 60; }
+  /* On desktop, push main content right to clear the fixed sidebar */
+  .main { flex: 1; overflow-y: auto; padding: 20px 24px; margin-left: 214px; }
 
   /* Sidebar */
   .sb-section { margin-bottom: 22px; }
@@ -227,11 +229,8 @@
   /* toolbar-row2: inline on desktop, full-width row on mobile */
   .toolbar-row2 { display: contents; }
 
-  /* Hide sidebar when on dashboard view — desktop only; mobile uses transform drawer */
-  .sb-hidden { display: none; }
-  @media (max-width: 768px) {
-    .sb-hidden { display: block; } /* let the drawer CSS (transform) control visibility instead */
-  }
+  /* Hide sidebar on dashboard view — translate off-screen (works for fixed positioning) */
+  .sb-hidden { transform: translateX(-100%) !important; }
 
   /* ── Mobile FAB ── */
   .fab { display: none; }
@@ -247,7 +246,6 @@
 
   /* ── Tablet & mobile (≤768px) ── */
   @media (max-width: 768px) {
-    /* Prevent horizontal overflow */
     html, body { overflow-x: hidden; }
 
     /* Header: tighter, hamburger replaces nothing, add-btn becomes FAB */
@@ -263,21 +261,16 @@
     .stat-n { font-size: 22px; }
     .stat-l { font-size: 9px; letter-spacing: 0.8px; }
 
-    /* Body: sidebar becomes a drawer */
-    .body { position: relative; }
+    /* Mobile: sidebar slides in from left, main takes full width */
     .sidebar {
-      position: fixed;
-      top: 0; left: 0; bottom: 0;
-      width: 240px;
-      z-index: 60;
+      top: 0;
+      width: 260px;
       transform: translateX(-100%);
       transition: transform 0.22s ease;
-      padding-top: 64px;
+      padding-top: 16px;
     }
     .sidebar.open { transform: translateX(0); }
-
-    /* Main area takes full width */
-    .main { padding: 14px 14px; }
+    .main { margin-left: 0; padding: 14px; }
 
     /* Toolbar: stack controls */
     .toolbar { gap: 8px; }
@@ -383,11 +376,7 @@
 
   <div class="stats-bar" id="stats-bar"></div>
 
-  <!-- Drawer overlay (mobile) -->
-  <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
-
   <div class="body">
-    <div class="sidebar" id="sidebar"></div>
     <div class="main" id="main-view">
       <div class="toolbar">
         <div class="search-wrap">
@@ -519,10 +508,13 @@
   </div>
 </div>
 
-<!-- Floating Action Button (mobile only) -->
-<button class="fab" onclick="openAddFilm()" aria-label="Add item"><i class="ti ti-plus"></i></button>
 
 </div><!-- /.app -->
+
+<!-- Sidebar, FAB and drawer overlay are outside .app so position:fixed works on all browsers -->
+<div class="sidebar" id="sidebar"></div>
+<button class="fab" onclick="openAddFilm()" aria-label="Add item"><i class="ti ti-plus"></i></button>
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
 
 <script>
 const PER_PAGE = 15;
@@ -1216,20 +1208,21 @@ let chartInstances = {};
 
 function switchView(view) {
   currentView = view;
-  document.getElementById('main-view').style.display = view === 'collection' ? '' : 'none';
-  // Use a class rather than inline display so the mobile drawer CSS isn't overridden
-  document.getElementById('sidebar').classList.toggle('sb-hidden', view !== 'collection');
-  document.getElementById('dashboard-view').classList.toggle('visible', view === 'dashboard');
-  document.getElementById('tab-collection').classList.toggle('active', view === 'collection');
-  document.getElementById('tab-dashboard').classList.toggle('active', view === 'dashboard');
-  // Hide FAB on dashboard; show on collection
+  const isCollection = view === 'collection';
+  const isMobile = window.innerWidth <= 768;
+  document.getElementById('main-view').style.display = isCollection ? '' : 'none';
+  document.getElementById('sidebar').classList.toggle('sb-hidden', !isCollection);
+  // On desktop the main area needs a left margin to clear the fixed sidebar
+  document.getElementById('main-view').style.marginLeft = (isCollection && !isMobile) ? '214px' : '';
+  document.getElementById('dashboard-view').classList.toggle('visible', !isCollection);
+  document.getElementById('tab-collection').classList.toggle('active', isCollection);
+  document.getElementById('tab-dashboard').classList.toggle('active', !isCollection);
   const fab = document.querySelector('.fab');
-  if (fab) fab.style.display = view === 'collection' ? '' : 'none';
-  // Hide hamburger on dashboard (no sidebar there)
+  if (fab) fab.style.display = isCollection ? '' : 'none';
   const hbg = document.getElementById('hamburger-btn');
-  if (hbg) hbg.style.display = view === 'collection' ? '' : 'none';
+  if (hbg) hbg.style.display = isCollection ? '' : 'none';
   closeDrawer();
-  if (view === 'dashboard') renderDashboard();
+  if (!isCollection) renderDashboard();
 }
 
 // ── Dashboard drill-through ──
