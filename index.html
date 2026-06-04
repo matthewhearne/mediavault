@@ -223,16 +223,151 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+  /* toolbar-row2: inline on desktop, full-width row on mobile */
+  .toolbar-row2 { display: contents; }
+
+  /* ── Mobile FAB ── */
+  .fab { display: none; }
+
+  /* ── Sidebar drawer overlay ── */
+  .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 50; }
+  .drawer-overlay.open { display: block; }
+
+  /* ── Mobile: touch-friendly icon buttons ── */
+  @media (hover: none) {
+    .icon-btn { min-width: 44px; min-height: 44px; font-size: 18px; }
+  }
+
+  /* ── Tablet & mobile (≤768px) ── */
+  @media (max-width: 768px) {
+    /* Prevent horizontal overflow */
+    html, body { overflow-x: hidden; }
+
+    /* Header: tighter, hamburger replaces nothing, add-btn becomes FAB */
+    .header { padding: 0 14px; gap: 8px; }
+    .header .add-btn { display: none; }
+
+    /* Nav tabs: smaller text */
+    .nav-tab { font-size: 12px; padding: 5px 10px; }
+    .nav-tab i { font-size: 14px; }
+
+    /* Stats bar: smaller padding */
+    .stat { padding: 8px 6px; }
+    .stat-n { font-size: 22px; }
+    .stat-l { font-size: 9px; letter-spacing: 0.8px; }
+
+    /* Body: sidebar becomes a drawer */
+    .body { position: relative; }
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: 240px;
+      z-index: 60;
+      transform: translateX(-100%);
+      transition: transform 0.22s ease;
+      padding-top: 64px;
+    }
+    .sidebar.open { transform: translateX(0); }
+
+    /* Main area takes full width */
+    .main { padding: 14px 14px; }
+
+    /* Toolbar: stack controls */
+    .toolbar { gap: 8px; }
+    .search-wrap { min-width: 0; width: 100%; flex: none; }
+    select.ctrl { flex: 1; min-width: 0; font-size: 16px; /* prevent iOS zoom */ }
+    .toolbar-row2 { display: flex; gap: 8px; width: 100%; }
+
+    /* Table: hide format & year columns on small screens */
+    .col-format, .col-format-head { display: none; }
+    td.col-year-sub .film-sub { display: none; }
+
+    /* Touch-friendly icon buttons */
+    .icon-btn { min-width: 40px; min-height: 40px; font-size: 18px; border-radius: 8px; }
+
+    /* Table cells tighter */
+    td, thead th { padding: 9px 8px; }
+    thead th:first-child, td:first-child { padding-left: 12px; }
+
+    /* Floating Action Button */
+    .fab {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: fixed;
+      bottom: 22px;
+      right: 18px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #0a0a0b;
+      border: none;
+      font-size: 26px;
+      cursor: pointer;
+      z-index: 40;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      transition: transform 0.12s, opacity 0.12s;
+    }
+    .fab:active { transform: scale(0.92); }
+
+    /* Hamburger button */
+    .hamburger { display: flex; }
+
+    /* Dashboard: single column */
+    .dash-grid { grid-template-columns: 1fr; }
+    .dash-card.full { grid-column: 1; }
+    .dashboard { padding: 14px; }
+    .dash-donut-wrap { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .dash-chart-wrap[style*="160px"] { width: 100% !important; height: 180px !important; }
+
+    /* Modal: prevent iOS zoom on inputs */
+    .fg input, .fg select { font-size: 16px; }
+    .modal { margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; max-height: 92vh; }
+    .modal-overlay { align-items: flex-end; padding: 0; }
+
+    /* Box set grouped view gaps */
+    .bs-groups { gap: 10px; }
+
+    /* Pager: compact */
+    .pager { font-size: 12px; }
+    .pg-btn { padding: 5px 9px; font-size: 12px; }
+  }
+
+  /* ── Very small phones (≤380px) ── */
+  @media (max-width: 380px) {
+    .logo { font-size: 22px; letter-spacing: 2px; }
+    .nav-tab span { display: none; } /* icon only */
+    .stat-n { font-size: 18px; }
+  }
+
+  /* ── Hamburger button (hidden on desktop) ── */
+  .hamburger {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text2);
+    font-size: 22px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: var(--radius);
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .hamburger:hover { color: var(--text); background: var(--surface2); }
 </style>
 </head>
 <body>
 <div class="app">
 
   <div class="header">
+    <button class="hamburger" id="hamburger-btn" onclick="toggleDrawer()" aria-label="Open menu"><i class="ti ti-menu-2"></i></button>
     <div class="logo">MEDIA<span>VAULT</span></div>
     <div class="nav-tabs">
-      <button class="nav-tab active" id="tab-collection" onclick="switchView('collection')"><i class="ti ti-list"></i> Collection</button>
-      <button class="nav-tab" id="tab-dashboard" onclick="switchView('dashboard')"><i class="ti ti-chart-bar"></i> Dashboard</button>
+      <button class="nav-tab active" id="tab-collection" onclick="switchView('collection')"><i class="ti ti-list"></i> <span>Collection</span></button>
+      <button class="nav-tab" id="tab-dashboard" onclick="switchView('dashboard')"><i class="ti ti-chart-bar"></i> <span>Dashboard</span></button>
     </div>
     <div style="display:flex;align-items:center;gap:16px">
       <div id="sync-status" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3)"></div>
@@ -242,6 +377,9 @@
 
   <div class="stats-bar" id="stats-bar"></div>
 
+  <!-- Drawer overlay (mobile) -->
+  <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+
   <div class="body">
     <div class="sidebar" id="sidebar"></div>
     <div class="main" id="main-view">
@@ -250,14 +388,16 @@
           <i class="ti ti-search"></i>
           <input type="text" id="q" placeholder="Search by title…" oninput="goPage(1)">
         </div>
-        <select class="ctrl" id="year-sel" onchange="goPage(1)">
-          <option value="">All years</option>
-        </select>
-        <select class="ctrl" id="sort-sel" onchange="goPage(1)">
-          <option value="title">Title A–Z</option>
-          <option value="year">Year (newest)</option>
-          <option value="added">Recently added</option>
-        </select>
+        <div class="toolbar-row2">
+          <select class="ctrl" id="year-sel" onchange="goPage(1)">
+            <option value="">All years</option>
+          </select>
+          <select class="ctrl" id="sort-sel" onchange="goPage(1)">
+            <option value="title">Title A–Z</option>
+            <option value="year">Year (newest)</option>
+            <option value="added">Recently added</option>
+          </select>
+        </div>
       </div>
       <div id="list-wrap"></div>
       <div id="pager-wrap"></div>
@@ -372,6 +512,11 @@
     </div>
   </div>
 </div>
+
+<!-- Floating Action Button (mobile only) -->
+<button class="fab" onclick="openAddFilm()" aria-label="Add item"><i class="ti ti-plus"></i></button>
+
+</div><!-- /.app -->
 
 <script>
 const PER_PAGE = 15;
@@ -652,7 +797,7 @@ function filmRowHtml(f) {
       <div class="film-title">${f.title}${typeBadge}${bsBadge}</div>
       ${f.year ? `<div class="film-sub">${f.year}</div>` : ''}
     </td>
-    <td style="width:90px">${fmt}</td>
+    <td style="width:90px" class="col-format">${fmt}</td>
     <td class="c" style="width:46px"><button class="icon-btn ${f.wanted?'on-wanted':''}" onclick="toggle(${f.id},'wanted')" title="${f.wanted?'Wanted':'Mark wanted'}"><i class="ti ti-shopping-cart"></i></button></td>
     <td class="c" style="width:46px"><button class="icon-btn ${f.watchlist?'on-watchlist':''}" onclick="toggle(${f.id},'watchlist')" title="${f.watchlist?'On watchlist':'Add to watchlist'}"><i class="ti ti-bookmark"></i></button></td>
     <td class="c" style="width:46px"><button class="icon-btn ${f.favourite?'on-favourite':''}" onclick="toggle(${f.id},'favourite')" title="${f.favourite?'Favourite':'Mark favourite'}"><i class="ti ti-heart"></i></button></td>
@@ -660,9 +805,9 @@ function filmRowHtml(f) {
   </tr>`;
 }
 
-const TABLE_HEAD = `<colgroup><col><col style="width:90px"><col style="width:46px"><col style="width:46px"><col style="width:46px"><col style="width:46px"></colgroup>
+const TABLE_HEAD = `<colgroup><col><col style="width:90px" class="col-format-head"><col style="width:46px"><col style="width:46px"><col style="width:46px"><col style="width:46px"></colgroup>
   <thead><tr>
-    <th>Film</th><th>Format</th>
+    <th>Film</th><th class="col-format-head">Format</th>
     <th class="c" title="Wanted"><i class="ti ti-shopping-cart"></i></th>
     <th class="c" title="Watchlist"><i class="ti ti-bookmark"></i></th>
     <th class="c" title="Favourite"><i class="ti ti-heart"></i></th>
@@ -743,11 +888,15 @@ function goPage(p) { currentPage = p; renderList(); }
 
 // ── Filters ──
 function setFilter(f) {
-  activeFilter = f; activeFormat = null; currentPage = 1; render();
+  activeFilter = f; activeFormat = null; currentPage = 1;
+  closeDrawer();
+  render();
 }
 function toggleFormat(fmt) {
   activeFormat = activeFormat === fmt ? null : fmt;
-  activeFilter = 'all'; currentPage = 1; render();
+  activeFilter = 'all'; currentPage = 1;
+  closeDrawer();
+  render();
 }
 function toggle(id, field) {
   const f = films.find(x => x.id === id);
@@ -1043,6 +1192,18 @@ function deleteBoxSet() {
   else render();
 }
 
+// ── Mobile drawer ──
+function toggleDrawer() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('drawer-overlay');
+  const open = sb.classList.toggle('open');
+  ov.classList.toggle('open', open);
+}
+function closeDrawer() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+
 // ── View switching ──
 let currentView = 'collection';
 let chartInstances = {};
@@ -1054,6 +1215,13 @@ function switchView(view) {
   document.getElementById('dashboard-view').classList.toggle('visible', view === 'dashboard');
   document.getElementById('tab-collection').classList.toggle('active', view === 'collection');
   document.getElementById('tab-dashboard').classList.toggle('active', view === 'dashboard');
+  // Hide FAB on dashboard; show on collection
+  const fab = document.querySelector('.fab');
+  if (fab) fab.style.display = view === 'collection' ? '' : 'none';
+  // Hide hamburger on dashboard (no sidebar there)
+  const hbg = document.getElementById('hamburger-btn');
+  if (hbg) hbg.style.display = view === 'collection' ? '' : 'none';
+  closeDrawer();
   if (view === 'dashboard') renderDashboard();
 }
 
