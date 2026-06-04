@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediaVault — Collection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f11;
+    --surface: #17171a;
+    --surface2: #1f1f24;
+    --surface3: #26262c;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.15);
+    --text: #f0eee8;
+    --text2: #9a99a3;
+    --text3: #5a5a65;
+    --accent: #e8c547;
+    --accent-dim: rgba(232,197,71,0.12);
+    --green: #4ade80;
+    --green-dim: rgba(74,222,128,0.12);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,0.12);
+    --amber: #fb923c;
+    --amber-dim: rgba(251,146,60,0.12);
+    --pink: #f472b6;
+    --pink-dim: rgba(244,114,182,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --purple: #a78bfa;
+    --purple-dim: rgba(167,139,250,0.12);
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.5; }
+
+  .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  .header { flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; }
+  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 4px; color: var(--text); }
+  .logo span { color: var(--accent); }
+
+  .stats-bar { flex-shrink: 0; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border-bottom: 1px solid var(--border); }
+  .stat { padding: 10px 20px; text-align: center; border-right: 1px solid var(--border); }
+  .stat:last-child { border-right: none; }
+  .stat-n { font-family: 'Bebas Neue', sans-serif; font-size: 28px; line-height: 1; color: var(--accent); }
+  .stat-l { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); margin-top: 1px; }
+
+  .body { flex: 1; display: flex; overflow: hidden; }
+  .sidebar { flex-shrink: 0; width: 214px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 16px 10px; }
+  .main { flex: 1; overflow-y: auto; padding: 20px 24px; }
+
+  /* Sidebar */
+  .sb-section { margin-bottom: 22px; }
+  .sb-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text3); margin-bottom: 6px; padding-left: 10px; }
+  .sb-btn { display: flex; align-items: center; gap: 8px; width: 100%; background: none; border: none; color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 7px 10px; border-radius: var(--radius); cursor: pointer; text-align: left; transition: background 0.12s, color 0.12s; white-space: nowrap; overflow: hidden; }
+  .sb-btn:hover { background: var(--surface2); color: var(--text); }
+  .sb-btn.active { background: var(--accent-dim); color: var(--accent); }
+  .sb-btn i { font-size: 15px; width: 16px; flex-shrink: 0; }
+  .sb-btn-label { overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+  .sb-count { flex-shrink: 0; font-size: 11px; color: var(--text3); background: var(--surface2); padding: 1px 7px; border-radius: 20px; }
+  .sb-btn.active .sb-count { background: rgba(232,197,71,0.15); color: var(--accent); }
+
+  /* Toolbar */
+  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .search-wrap { flex: 1; min-width: 180px; position: relative; }
+  .search-wrap i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 15px; pointer-events: none; }
+  .search-wrap input { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 12px 8px 34px; border-radius: var(--radius); outline: none; transition: border-color 0.12s; }
+  .search-wrap input:focus { border-color: var(--border-hover); }
+  .search-wrap input::placeholder { color: var(--text3); }
+  select.ctrl { background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 10px; border-radius: var(--radius); outline: none; cursor: pointer; }
+  select.ctrl option { background: #1f1f24; }
+  .add-btn { display: flex; align-items: center; gap: 6px; background: var(--accent); color: #0a0a0b; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: var(--radius); cursor: pointer; white-space: nowrap; transition: opacity 0.12s; }
+  .add-btn:hover { opacity: 0.88; }
+
+  /* Table */
+  .table-wrap { border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  thead th { background: var(--surface2); font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 500; padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+  thead th.c { text-align: center; }
+  tbody tr { transition: background 0.1s; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody tr + tr td { border-top: 1px solid var(--border); }
+  td { padding: 11px 14px; vertical-align: middle; }
+  td.c { text-align: center; }
+
+  .film-title { font-weight: 500; font-size: 14px; color: var(--text); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .film-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  .fmt { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .fmt-DVD    { background: var(--blue-dim);   color: var(--blue); }
+  .fmt-Blu-Ray{ background: var(--green-dim);  color: var(--green); }
+  .fmt-4K     { background: var(--purple-dim); color: var(--purple); }
+  .fmt-3D     { background: var(--amber-dim);  color: var(--amber); }
+
+  .type-badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .type-Film    { background: rgba(96,165,250,0.1);  color: #60a5fa; }
+  .type-TV-Show { background: rgba(167,139,250,0.1); color: #a78bfa; }
+
+  .bs-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 500; color: var(--amber); background: var(--amber-dim); border: 1px solid rgba(251,146,60,0.2); padding: 1px 7px 1px 5px; border-radius: 4px; white-space: nowrap; letter-spacing: 0.3px; }
+  .bs-badge i { font-size: 11px; }
+
+  .icon-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 17px; padding: 4px; border-radius: 5px; line-height: 1; transition: color 0.12s, background 0.12s; display: inline-flex; align-items: center; justify-content: center; }
+  .icon-btn:hover { color: var(--text); background: var(--surface3); }
+  .icon-btn.on-wanted    { color: var(--amber); }
+  .icon-btn.on-watchlist { color: var(--blue); }
+  .icon-btn.on-favourite { color: var(--pink); }
+
+  /* Box set grouped view */
+  .bs-groups { display: flex; flex-direction: column; gap: 14px; }
+  .bs-group-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .bs-group-head { display: flex; align-items: center; gap: 10px; padding: 11px 16px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .bs-group-head i { color: var(--amber); font-size: 16px; flex-shrink: 0; }
+  .bs-group-name { font-size: 13px; font-weight: 500; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bs-group-meta { font-size: 11px; color: var(--text3); flex-shrink: 0; }
+  .bs-group-edit { background: none; border: none; color: var(--text3); cursor: pointer; padding: 4px 6px; border-radius: var(--radius); font-size: 14px; display: flex; align-items: center; transition: color 0.12s, background 0.12s; }
+  .bs-group-edit:hover { color: var(--text); background: var(--surface3); }
+
+  /* Pagination */
+  .pager { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; font-size: 13px; color: var(--text2); flex-wrap: wrap; gap: 10px; }
+  .pages { display: flex; gap: 4px; flex-wrap: wrap; }
+  .pg-btn { background: none; border: 1px solid var(--border); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 5px 11px; border-radius: var(--radius); cursor: pointer; transition: background 0.1s, color 0.1s; line-height: 1; display: inline-flex; align-items: center; }
+  .pg-btn:hover:not(:disabled) { background: var(--surface2); color: var(--text); }
+  .pg-btn.active { background: var(--accent); color: #0a0a0b; border-color: var(--accent); font-weight: 500; }
+  .pg-btn:disabled { opacity: 0.3; cursor: default; }
+
+  /* Empty */
+  .empty { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .empty i { font-size: 40px; display: block; margin-bottom: 12px; }
+  .empty p { font-size: 14px; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border-hover); border-radius: var(--radius-lg); width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 0; }
+  .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; }
+  .modal-close { background: none; border: none; color: var(--text3); font-size: 20px; cursor: pointer; padding: 4px; border-radius: 5px; line-height: 1; }
+  .modal-close:hover { color: var(--text); background: var(--surface2); }
+  .modal-body { padding: 20px 24px 0; }
+  .fg { margin-bottom: 14px; }
+  .fg label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin-bottom: 5px; }
+  .fg input, .fg select { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 9px 12px; border-radius: var(--radius); outline: none; transition: border-color 0.12s; }
+  .fg input:focus, .fg select:focus { border-color: var(--border-hover); }
+  .fg select option { background: var(--surface2); }
+  .fg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .checks { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+  .check-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text2); cursor: pointer; user-select: none; }
+  .check-label input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+  .check-label:hover { color: var(--text); }
+
+  /* Box set search picker inside film modal */
+  .bs-selected-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--amber); background: var(--amber-dim); border: 1px solid rgba(251,146,60,0.25); padding: 5px 10px; border-radius: var(--radius); margin-bottom: 8px; }
+  .bs-selected-chip button { background: none; border: none; color: var(--amber); cursor: pointer; font-size: 14px; line-height: 1; padding: 0; display: flex; align-items: center; opacity: 0.7; }
+  .bs-selected-chip button:hover { opacity: 1; }
+  .bs-search-results { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-top: 6px; }
+  .bs-search-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text2); cursor: pointer; transition: background 0.1s, color 0.1s; }
+  .bs-search-item:last-child { border-bottom: none; }
+  .bs-search-item:hover { background: var(--surface3); color: var(--text); }
+  .bs-search-item i { font-size: 14px; color: var(--text3); flex-shrink: 0; }
+  .bs-search-item.create { color: var(--accent); }
+  .bs-search-item.create i { color: var(--accent); }
+
+  /* Box set management modal */
+  .bs-mgmt-list { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 14px; }
+  .bs-mgmt-row { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .bs-mgmt-row:last-child { border-bottom: none; }
+  .bs-mgmt-name { flex: 1; color: var(--text); font-weight: 500; }
+  .bs-mgmt-count { font-size: 11px; color: var(--text3); }
+  .bs-mgmt-del { background: none; border: none; color: var(--text3); cursor: pointer; padding: 4px; border-radius: 4px; font-size: 15px; display: flex; align-items: center; transition: color 0.12s; }
+  .bs-mgmt-del:hover { color: var(--red); }
+  .bs-mgmt-edit-input { flex: 1; background: var(--surface2); border: 1px solid var(--border-hover); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 5px 10px; border-radius: var(--radius); outline: none; }
+
+  .modal-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 16px 24px 24px; border-top: 1px solid var(--border); margin-top: 20px; }
+  .del-btn { margin-right: auto; background: none; border: 1px solid rgba(248,113,113,0.3); color: var(--red); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 14px; border-radius: var(--radius); cursor: pointer; display: flex; align-items: center; gap: 5px; transition: background 0.12s; }
+  .del-btn:hover { background: var(--red-dim); }
+  .sec-btn { background: none; border: 1px solid var(--border); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 16px; border-radius: var(--radius); cursor: pointer; transition: background 0.12s, color 0.12s; }
+  .sec-btn:hover { background: var(--surface2); color: var(--text); }
+  .pri-btn { background: var(--accent); color: #0a0a0b; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 8px 20px; border-radius: var(--radius); cursor: pointer; transition: opacity 0.12s; }
+  .pri-btn:hover { opacity: 0.88; }
+
+  /* Wikipedia lookup */
+  .wiki-lookup-wrap { position: relative; }
+  .wiki-results { position: absolute; top: 100%; left: 0; right: 0; z-index: 200; background: var(--surface2); border: 1px solid var(--border-hover); border-radius: var(--radius); overflow: hidden; margin-top: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); max-height: 240px; overflow-y: auto; }
+  .wiki-item { display: flex; flex-direction: column; gap: 2px; padding: 9px 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+  .wiki-item:last-child { border-bottom: none; }
+  .wiki-item:hover { background: var(--surface3); }
+  .wiki-item-title { font-size: 13px; color: var(--text); font-weight: 500; }
+  .wiki-item-desc { font-size: 11px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wiki-item-year { font-size: 11px; color: var(--accent); font-weight: 500; }
+  .wiki-loading { padding: 10px 12px; font-size: 13px; color: var(--text3); display: flex; align-items: center; gap: 8px; }
+  .wiki-lookup-btn { flex-shrink: 0; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 9px 12px; border-radius: var(--radius); cursor: pointer; display: flex; align-items: center; gap: 5px; transition: background 0.12s, color 0.12s, border-color 0.12s; white-space: nowrap; }
+  .wiki-lookup-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border-hover); }
+  .wiki-lookup-btn:disabled { opacity: 0.4; cursor: default; }
+  .wiki-lookup-btn i { font-size: 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .nav-tabs { display: flex; gap: 4px; align-items: center; }
+  .nav-tab { background: none; border: 1px solid transparent; color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: var(--radius); cursor: pointer; transition: background 0.12s, color 0.12s, border-color 0.12s; display: flex; align-items: center; gap: 6px; }
+  .nav-tab:hover { background: var(--surface2); color: var(--text); }
+  .nav-tab.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(232,197,71,0.25); }
+  .nav-tab i { font-size: 15px; }
+
+  /* Dashboard */
+  .dashboard { display: none; flex: 1; overflow-y: auto; padding: 24px; }
+  .dashboard.visible { display: block; }
+  .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .dash-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 20px 16px; }
+  .dash-card.full { grid-column: 1 / -1; }
+  .dash-card-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); margin-bottom: 16px; }
+  .dash-chart-wrap { position: relative; }
+  .dash-donut-wrap { display: flex; align-items: center; gap: 24px; }
+  .dash-legend { display: flex; flex-direction: column; gap: 8px; min-width: 120px; }
+  .dash-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2); }
+  .dash-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dash-legend-val { margin-left: auto; font-weight: 500; color: var(--text); font-size: 13px; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="logo">MEDIA<span>VAULT</span></div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="tab-collection" onclick="switchView('collection')"><i class="ti ti-list"></i> Collection</button>
+      <button class="nav-tab" id="tab-dashboard" onclick="switchView('dashboard')"><i class="ti ti-chart-bar"></i> Dashboard</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div id="sync-status" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3)"></div>
+      <button class="add-btn" onclick="openAddFilm()"><i class="ti ti-plus"></i> Add item</button>
+    </div>
+  </div>
+
+  <div class="stats-bar" id="stats-bar"></div>
+
+  <div class="body">
+    <div class="sidebar" id="sidebar"></div>
+    <div class="main" id="main-view">
+      <div class="toolbar">
+        <div class="search-wrap">
+          <i class="ti ti-search"></i>
+          <input type="text" id="q" placeholder="Search by title…" oninput="goPage(1)">
+        </div>
+        <select class="ctrl" id="year-sel" onchange="goPage(1)">
+          <option value="">All years</option>
+        </select>
+        <select class="ctrl" id="sort-sel" onchange="goPage(1)">
+          <option value="title">Title A–Z</option>
+          <option value="year">Year (newest)</option>
+          <option value="added">Recently added</option>
+        </select>
+      </div>
+      <div id="list-wrap"></div>
+      <div id="pager-wrap"></div>
+    </div>
+    <div class="dashboard" id="dashboard-view">
+      <div class="dash-grid">
+        <div class="dash-card">
+          <div class="dash-card-title">By format</div>
+          <div class="dash-donut-wrap">
+            <div class="dash-chart-wrap" style="width:160px;height:160px;flex-shrink:0"><canvas id="chart-format"></canvas></div>
+            <div class="dash-legend" id="legend-format"></div>
+          </div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-title">By type</div>
+          <div class="dash-donut-wrap">
+            <div class="dash-chart-wrap" style="width:160px;height:160px;flex-shrink:0"><canvas id="chart-type"></canvas></div>
+            <div class="dash-legend" id="legend-type"></div>
+          </div>
+        </div>
+        <div class="dash-card full">
+          <div class="dash-card-title">By year</div>
+          <div class="dash-chart-wrap" style="height:220px"><canvas id="chart-year"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Film modal ── -->
+<div class="modal-overlay" id="film-modal" onclick="overlayClick(event,'film-modal')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-title" id="film-modal-title">Add item</div>
+      <button class="modal-close" onclick="closeModal('film-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <label>Title *</label>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <input id="m-title" placeholder="e.g. The Dark Knight" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();wikiLookup()}">
+          <button class="wiki-lookup-btn" id="wiki-btn" onclick="wikiLookup()" title="Look up on Wikipedia"><i class="ti ti-world-search"></i> Look up</button>
+        </div>
+        <div class="wiki-lookup-wrap">
+          <div class="wiki-results" id="wiki-results" style="display:none"></div>
+        </div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>Year</label><input id="m-year" type="number" placeholder="2008" min="1888" max="2099"></div>
+        <div class="fg">
+          <label>Type</label>
+          <select id="m-type">
+            <option value="Film">Film</option>
+            <option value="TV Show">TV Show</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Format</label>
+        <select id="m-format">
+          <option value="">— none —</option>
+          <option>DVD</option>
+          <option>Blu-Ray</option>
+          <option>4K</option>
+          <option>3D</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Flags</label>
+        <div class="checks">
+          <label class="check-label"><input type="checkbox" id="m-wanted"> Wanted</label>
+          <label class="check-label"><input type="checkbox" id="m-watchlist"> Watchlist</label>
+          <label class="check-label"><input type="checkbox" id="m-favourite"> Favourite</label>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Box set</label>
+        <div id="bs-selected-display"></div>
+        <input id="bs-search-input" placeholder="Search or create a box set…" oninput="onBsSearch()" autocomplete="off">
+        <div id="bs-search-results"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="del-btn" id="film-del-btn" style="display:none" onclick="deleteFilm()"><i class="ti ti-trash"></i> Delete</button>
+      <button class="sec-btn" onclick="closeModal('film-modal')">Cancel</button>
+      <button class="pri-btn" onclick="saveFilm()">Save film</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Box set management modal ── -->
+<div class="modal-overlay" id="bs-modal" onclick="overlayClick(event,'bs-modal')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-title" id="bs-modal-title">Edit box set</div>
+      <button class="modal-close" onclick="closeModal('bs-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <label>Box set name</label>
+        <input id="bs-edit-name" placeholder="e.g. The Dark Knight Trilogy">
+      </div>
+      <div class="fg">
+        <label>Films in this set</label>
+        <div id="bs-films-list"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="del-btn" id="bs-del-btn" onclick="deleteBoxSet()"><i class="ti ti-trash"></i> Delete set</button>
+      <button class="sec-btn" onclick="closeModal('bs-modal')">Cancel</button>
+      <button class="pri-btn" onclick="saveBoxSet()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PER_PAGE = 15;
+let films = [], boxSets = [];
+let activeFilter = 'owned', activeFormat = null, activeYear = null, currentPage = 1;
+let editFilmId = null, editBsId = null;
+// tracks selected boxset id in film modal (null = none, string = id)
+let filmModalBsId = null;
+
+// ── Storage ──
+// ── Supabase config ──
+const SB_URL = 'https://djkmpqxratnahyavfjau.supabase.co';
+const SB_KEY = 'sb_publishable_padlTyNYJitVOJyKWBCjOQ_iipDxkLj';
+
+async function sbFetch(path, options = {}) {
+  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': options.prefer || '',
+      ...options.headers,
+    },
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Supabase error ${res.status}: ${err}`);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// ── Sync status UI ──
+function setSyncStatus(state, msg) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  const icons = { syncing: 'ti-loader-2', ok: 'ti-cloud-check', error: 'ti-cloud-exclamation', offline: 'ti-cloud-off' };
+  const colors = { syncing: 'var(--text3)', ok: 'var(--green)', error: 'var(--red)', offline: 'var(--amber)' };
+  const spin = state === 'syncing' ? 'style="animation:spin 1s linear infinite"' : '';
+  el.innerHTML = `<i class="ti ${icons[state]}" ${spin}></i><span>${msg}</span>`;
+  el.style.color = colors[state];
+}
+
+// ── Load from Supabase ──
+async function load() {
+  // First load from localStorage as immediate fallback
+  try {
+    const raw = JSON.parse(localStorage.getItem('reelvault_v4') || 'null');
+    if (raw) { films = raw.films || []; boxSets = raw.boxSets || []; }
+  } catch(e) {}
+  films.forEach(f => { if (!f.type) f.type = 'Film'; });
+
+  setSyncStatus('syncing', 'Syncing…');
+  render();
+
+  try {
+    const [sbBoxSets, sbItems] = await Promise.all([
+      sbFetch('box_sets?select=*&order=name'),
+      sbFetch('items?select=*&order=added.desc'),
+    ]);
+
+    boxSets = sbBoxSets.map(r => ({ id: r.id, name: r.name }));
+    films = sbItems.map(r => ({
+      id: r.id,
+      title: r.title,
+      year: r.year,
+      type: r.type || 'Film',
+      format: r.format,
+      wanted: r.wanted,
+      watchlist: r.watchlist,
+      favourite: r.favourite,
+      boxsetId: r.boxset_id,
+      added: r.added,
+    }));
+
+    saveLocal();
+    setSyncStatus('ok', 'Synced');
+    render();
+  } catch(e) {
+    console.error('Load error:', e);
+    setSyncStatus('error', 'Sync failed');
+    // Fall back to sample data if nothing in localStorage either
+    if (!films.length) loadSampleData();
+  }
+}
+
+function loadSampleData() {
+  boxSets = [
+    { id: 'bs1', name: 'The Dark Knight Trilogy' },
+    { id: 'bs2', name: 'Dune' },
+  ];
+  films = [
+    {id:1,title:'Parasite',year:2019,type:'Film',format:'Blu-Ray',wanted:false,watchlist:false,favourite:true,boxsetId:null,added:Date.now()-9e6},
+    {id:2,title:'Dune: Part One',year:2021,type:'Film',format:'4K',wanted:false,watchlist:false,favourite:false,boxsetId:'bs2',added:Date.now()-8e6},
+    {id:3,title:'Everything Everywhere All at Once',year:2022,type:'Film',format:'Blu-Ray',wanted:false,watchlist:false,favourite:true,boxsetId:null,added:Date.now()-7e6},
+    {id:4,title:'The Batman',year:2022,type:'Film',format:'4K',wanted:false,watchlist:true,favourite:false,boxsetId:null,added:Date.now()-6e6},
+    {id:5,title:'Aftersun',year:2022,type:'Film',format:'DVD',wanted:false,watchlist:false,favourite:true,boxsetId:null,added:Date.now()-5e6},
+    {id:6,title:'Oppenheimer',year:2023,type:'Film',format:'4K',wanted:true,watchlist:false,favourite:false,boxsetId:null,added:Date.now()-4e6},
+    {id:7,title:'Batman Begins',year:2005,type:'Film',format:'Blu-Ray',wanted:false,watchlist:false,favourite:false,boxsetId:'bs1',added:Date.now()-3e6},
+    {id:8,title:'The Dark Knight',year:2008,type:'Film',format:'Blu-Ray',wanted:false,watchlist:false,favourite:true,boxsetId:'bs1',added:Date.now()-2e6},
+    {id:9,title:'The Dark Knight Rises',year:2012,type:'Film',format:'Blu-Ray',wanted:false,watchlist:false,favourite:false,boxsetId:'bs1',added:Date.now()-1e6},
+    {id:10,title:'Dune: Part Two',year:2024,type:'Film',format:'4K',wanted:false,watchlist:false,favourite:true,boxsetId:'bs2',added:Date.now()-5e5},
+    {id:11,title:'Breaking Bad',year:2008,type:'TV Show',format:'Blu-Ray',wanted:false,watchlist:false,favourite:true,boxsetId:null,added:Date.now()-3e5},
+    {id:12,title:'Severance',year:2022,type:'TV Show',format:'',wanted:false,watchlist:true,favourite:false,boxsetId:null,added:Date.now()-2e5},
+  ];
+}
+
+// ── Save to localStorage (fast local cache) ──
+function saveLocal() {
+  try { localStorage.setItem('reelvault_v4', JSON.stringify({ films, boxSets })); } catch(e) {}
+}
+
+// ── Upsert a single film to Supabase ──
+async function saveFilmRemote(f) {
+  await sbFetch('items', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates',
+    headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      id: f.id,
+      title: f.title,
+      year: f.year || null,
+      type: f.type || 'Film',
+      format: f.format || null,
+      wanted: f.wanted,
+      watchlist: f.watchlist,
+      favourite: f.favourite,
+      boxset_id: f.boxsetId || null,
+      added: f.added,
+    }),
+  });
+}
+
+// ── Delete a film from Supabase ──
+async function deleteFilmRemote(id) {
+  await sbFetch(`items?id=eq.${id}`, { method: 'DELETE' });
+}
+
+// ── Upsert a box set to Supabase ──
+async function saveBoxSetRemote(bs) {
+  await sbFetch('box_sets', {
+    method: 'POST',
+    headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ id: bs.id, name: bs.name }),
+  });
+}
+
+// ── Delete a box set from Supabase ──
+async function deleteBoxSetRemote(id) {
+  await sbFetch(`box_sets?id=eq.${id}`, { method: 'DELETE' });
+}
+
+// ── save() is now the main sync entry point ──
+async function save(filmToSync, deletedFilmId, bsToSync, deletedBsId) {
+  saveLocal();
+  setSyncStatus('syncing', 'Saving…');
+  try {
+    if (deletedFilmId) await deleteFilmRemote(deletedFilmId);
+    if (filmToSync)    await saveFilmRemote(filmToSync);
+    if (deletedBsId)   await deleteBoxSetRemote(deletedBsId);
+    if (bsToSync)      await saveBoxSetRemote(bsToSync);
+    setSyncStatus('ok', 'Saved');
+  } catch(e) {
+    console.error('Save error:', e);
+    setSyncStatus('error', 'Save failed');
+  }
+}
+
+// ── Helpers ──
+function bsName(id) { const b = boxSets.find(x => x.id === id); return b ? b.name : ''; }
+function bsFilms(id) { return films.filter(f => f.boxsetId === id); }
+
+// ── Filtering ──
+function getFiltered() {
+  const q = (document.getElementById('q').value || '').toLowerCase();
+  activeYear = document.getElementById('year-sel').value || null;
+  return films
+    .filter(f => {
+      if (q && !f.title.toLowerCase().includes(q)) return false;
+      if (activeFormat && f.format !== activeFormat) return false;
+      if (activeYear && String(f.year) !== activeYear) return false;
+      if (activeFilter === 'owned')      return !f.wanted;
+      if (activeFilter === 'wanted')     return f.wanted;
+      if (activeFilter === 'watchlist')  return f.watchlist;
+      if (activeFilter === 'favourites') return f.favourite;
+      if (activeFilter === 'boxsets')    return !!f.boxsetId;
+      if (activeFilter === 'films')      return !f.wanted && f.type === 'Film';
+      if (activeFilter === 'tvshows')    return !f.wanted && f.type === 'TV Show';
+      return !f.wanted;
+    })
+    .sort((a, b) => {
+      const s = document.getElementById('sort-sel').value;
+      if (s === 'title') return sortTitle(a.title).localeCompare(sortTitle(b.title));
+      if (s === 'year')  return (b.year||0) - (a.year||0);
+      return b.added - a.added;
+    });
+}
+
+function populateYearDropdown() {
+  const sel = document.getElementById('year-sel');
+  const current = sel.value;
+  const years = [...new Set(films.map(f => f.year).filter(Boolean))].sort((a,b) => b - a);
+  sel.innerHTML = '<option value="">All years</option>' +
+    years.map(y => `<option value="${y}"${String(y) === current ? ' selected' : ''}>${y}</option>`).join('');
+}
+
+// ── Render stats ──
+function renderStats() {
+  const owned = films.filter(f=>!f.wanted).length;
+  const wanted = films.filter(f=>f.wanted).length;
+  const filmCount = films.filter(f=>!f.wanted && f.type==='Film').length;
+  const tvCount = films.filter(f=>!f.wanted && f.type==='TV Show').length;
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat"><div class="stat-n">${owned}</div><div class="stat-l">Owned</div></div>
+    <div class="stat"><div class="stat-n">${wanted}</div><div class="stat-l">Wanted</div></div>
+    <div class="stat"><div class="stat-n">${filmCount}</div><div class="stat-l">Films</div></div>
+    <div class="stat"><div class="stat-n">${tvCount}</div><div class="stat-l">TV Shows</div></div>`;
+}
+
+// ── Render sidebar ──
+function renderSidebar() {
+  const counts = {
+    owned:      films.filter(f=>!f.wanted).length,
+    films:      films.filter(f=>!f.wanted && f.type==='Film').length,
+    tvshows:    films.filter(f=>!f.wanted && f.type==='TV Show').length,
+    wanted:     films.filter(f=>f.wanted).length,
+    watchlist:  films.filter(f=>f.watchlist).length,
+    favourites: films.filter(f=>f.favourite).length,
+    boxsets:    boxSets.length,
+  };
+  const fmtCounts = {};
+  ['DVD','Blu-Ray','4K','3D'].forEach(fmt => { fmtCounts[fmt] = films.filter(f=>f.format===fmt).length; });
+
+  const libFilters = [
+    ['owned',      'ti-stack-2',      'Owned'],
+    ['films',      'ti-movie',        'Films'],
+    ['tvshows',    'ti-device-tv',    'TV Shows'],
+    ['wanted',     'ti-shopping-cart','Wanted'],
+    ['watchlist',  'ti-bookmark',     'Watchlist'],
+    ['favourites', 'ti-heart',        'Favourites'],
+    ['boxsets',    'ti-package',      'Box sets'],
+  ];
+
+  let html = '<div class="sb-section"><div class="sb-title">Library</div>';
+  libFilters.forEach(([key, icon, label]) => {
+    const on = activeFilter === key && !activeFormat ? 'active' : '';
+    html += `<button class="sb-btn ${on}" onclick="setFilter('${key}')">
+      <i class="ti ${icon}"></i><span class="sb-btn-label">${label}</span>
+      <span class="sb-count">${counts[key]}</span>
+    </button>`;
+  });
+  html += '</div>';
+
+  // Format section
+  html += '<div class="sb-section"><div class="sb-title">Format</div>';
+  [['DVD','ti-disc'],['Blu-Ray','ti-disc'],['4K','ti-disc'],['3D','ti-disc']].forEach(([fmt, icon]) => {
+    const fkey = fmt.toLowerCase().replace('-','').replace(' ','');
+    const on = activeFormat === fmt ? 'active' : '';
+    html += `<button class="sb-btn ${on}" id="fmt-${fkey}" onclick="toggleFormat('${fmt}')">
+      <i class="ti ${icon}"></i><span class="sb-btn-label">${fmt}</span>
+      <span class="sb-count">${fmtCounts[fmt]}</span>
+    </button>`;
+  });
+  html += '</div>';
+
+  document.getElementById('sidebar').innerHTML = html;
+}
+
+// ── Film row HTML ──
+function filmRowHtml(f) {
+  const fmt = f.format ? `<span class="fmt fmt-${f.format}">${f.format}</span>` : '';
+  const typeCls = (f.type || 'Film').replace(' ', '-');
+  const typeBadge = `<span class="type-badge type-${typeCls}">${f.type || 'Film'}</span>`;
+  const bsBadge = f.boxsetId ? `<span class="bs-badge"><i class="ti ti-package"></i>${bsName(f.boxsetId)}</span>` : '';
+  return `<tr>
+    <td style="width:auto">
+      <div class="film-title">${f.title}${typeBadge}${bsBadge}</div>
+      ${f.year ? `<div class="film-sub">${f.year}</div>` : ''}
+    </td>
+    <td style="width:90px">${fmt}</td>
+    <td class="c" style="width:46px"><button class="icon-btn ${f.wanted?'on-wanted':''}" onclick="toggle(${f.id},'wanted')" title="${f.wanted?'Wanted':'Mark wanted'}"><i class="ti ti-shopping-cart"></i></button></td>
+    <td class="c" style="width:46px"><button class="icon-btn ${f.watchlist?'on-watchlist':''}" onclick="toggle(${f.id},'watchlist')" title="${f.watchlist?'On watchlist':'Add to watchlist'}"><i class="ti ti-bookmark"></i></button></td>
+    <td class="c" style="width:46px"><button class="icon-btn ${f.favourite?'on-favourite':''}" onclick="toggle(${f.id},'favourite')" title="${f.favourite?'Favourite':'Mark favourite'}"><i class="ti ti-heart"></i></button></td>
+    <td class="c" style="width:46px"><button class="icon-btn" onclick="openEditFilm(${f.id})" title="Edit"><i class="ti ti-edit"></i></button></td>
+  </tr>`;
+}
+
+const TABLE_HEAD = `<colgroup><col><col style="width:90px"><col style="width:46px"><col style="width:46px"><col style="width:46px"><col style="width:46px"></colgroup>
+  <thead><tr>
+    <th>Film</th><th>Format</th>
+    <th class="c" title="Wanted"><i class="ti ti-shopping-cart"></i></th>
+    <th class="c" title="Watchlist"><i class="ti ti-bookmark"></i></th>
+    <th class="c" title="Favourite"><i class="ti ti-heart"></i></th>
+    <th></th>
+  </tr></thead>`;
+
+// ── Render list ──
+function renderList() {
+  const wrap = document.getElementById('list-wrap');
+  const pagerEl = document.getElementById('pager-wrap');
+
+  // Box sets grouped view
+  if (activeFilter === 'boxsets') {
+    if (!boxSets.length) {
+      wrap.innerHTML = `<div class="empty"><i class="ti ti-package"></i><p>No box sets yet. Create one when adding a film.</p></div>`;
+      pagerEl.innerHTML = ''; return;
+    }
+    const cards = boxSets.map(bs => {
+      const members = bsFilms(bs.id).sort((a,b) => (a.year||0)-(b.year||0) || sortTitle(a.title).localeCompare(sortTitle(b.title)));
+      const rows = members.length
+        ? members.map(f => filmRowHtml(f)).join('')
+        : `<tr><td colspan="6" style="padding:12px 16px;color:var(--text3);font-size:13px">No items in this set yet.</td></tr>`;
+      return `<div class="bs-group-card">
+        <div class="bs-group-head">
+          <i class="ti ti-package"></i>
+          <span class="bs-group-name">${bs.name}</span>
+          <span class="bs-group-meta">${members.length} film${members.length!==1?'s':''}</span>
+          <button class="bs-group-edit" onclick="openEditBs('${bs.id}')" title="Edit box set"><i class="ti ti-edit"></i></button>
+        </div>
+        <div class="table-wrap" style="border-radius:0;border:none">
+          <table>${TABLE_HEAD}<tbody>${rows}</tbody></table>
+        </div>
+      </div>`;
+    }).join('');
+    wrap.innerHTML = `<div class="bs-groups">${cards}</div>`;
+    pagerEl.innerHTML = `<div class="pager"><span>${boxSets.length} box set${boxSets.length!==1?'s':''}</span><span></span></div>`;
+    return;
+  }
+
+  // Normal paginated list
+  const filtered = getFiltered();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  const slice = filtered.slice((currentPage-1)*PER_PAGE, currentPage*PER_PAGE);
+
+  if (!slice.length) {
+    wrap.innerHTML = `<div class="empty"><i class="ti ti-movie-off"></i><p>No items match your filter.</p></div>`;
+    pagerEl.innerHTML = ''; return;
+  }
+
+  wrap.innerHTML = `<div class="table-wrap"><table>${TABLE_HEAD}<tbody>${slice.map(filmRowHtml).join('')}</tbody></table></div>`;
+
+  if (totalPages <= 1) {
+    pagerEl.innerHTML = `<div class="pager"><span>${filtered.length} film${filtered.length!==1?'s':''}</span><span></span></div>`;
+    return;
+  }
+  let pgBtns = '';
+  for (let i = 1; i <= totalPages; i++) {
+    if (totalPages > 9 && i > 2 && i < totalPages-1 && Math.abs(i-currentPage) > 1) {
+      if (i===3||i===totalPages-2) pgBtns += `<span style="padding:0 4px;color:var(--text3)">…</span>`;
+      continue;
+    }
+    pgBtns += `<button class="pg-btn${i===currentPage?' active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  pagerEl.innerHTML = `<div class="pager">
+    <span>${filtered.length} film${filtered.length!==1?'s':''}</span>
+    <div class="pages">
+      <button class="pg-btn" onclick="goPage(${currentPage-1})" ${currentPage<=1?'disabled':''}><i class="ti ti-chevron-left"></i></button>
+      ${pgBtns}
+      <button class="pg-btn" onclick="goPage(${currentPage+1})" ${currentPage>=totalPages?'disabled':''}><i class="ti ti-chevron-right"></i></button>
+    </div>
+    <span>Page ${currentPage} of ${totalPages}</span>
+  </div>`;
+}
+
+function render() { renderStats(); renderSidebar(); populateYearDropdown(); renderList(); }
+function goPage(p) { currentPage = p; renderList(); }
+
+// ── Filters ──
+function setFilter(f) {
+  activeFilter = f; activeFormat = null; currentPage = 1; render();
+}
+function toggleFormat(fmt) {
+  activeFormat = activeFormat === fmt ? null : fmt;
+  activeFilter = 'all'; currentPage = 1; render();
+}
+function toggle(id, field) {
+  const f = films.find(x => x.id === id);
+  if (f) { f[field] = !f[field]; save(f); render(); }
+}
+
+// ── Box set search picker (inside film modal) ──
+function renderBsSelected() {
+  const el = document.getElementById('bs-selected-display');
+  if (!filmModalBsId) { el.innerHTML = ''; return; }
+  const bs = boxSets.find(x => x.id === filmModalBsId);
+  el.innerHTML = bs
+    ? `<div class="bs-selected-chip"><i class="ti ti-package"></i>${bs.name}<button onclick="clearBsSelection()" title="Remove"><i class="ti ti-x"></i></button></div>`
+    : '';
+}
+
+function clearBsSelection() {
+  filmModalBsId = null;
+  document.getElementById('bs-search-input').value = '';
+  document.getElementById('bs-search-results').innerHTML = '';
+  renderBsSelected();
+}
+
+function onBsSearch() {
+  const q = (document.getElementById('bs-search-input').value || '').trim().toLowerCase();
+  const wrap = document.getElementById('bs-search-results');
+  if (!q) { wrap.innerHTML = ''; return; }
+
+  const matches = boxSets.filter(bs => bs.name.toLowerCase().includes(q));
+  const exactMatch = boxSets.some(bs => bs.name.toLowerCase() === q);
+  let html = '';
+
+  if (matches.length) {
+    html += matches.map(bs =>
+      `<div class="bs-search-item" onclick="pickBs('${bs.id}')"><i class="ti ti-package"></i>${bs.name}</div>`
+    ).join('');
+  }
+
+  if (!exactMatch) {
+    const display = document.getElementById('bs-search-input').value.trim();
+    html += `<div class="bs-search-item create" onclick="createAndPickBs()"><i class="ti ti-plus"></i>Create "${display}"</div>`;
+  }
+
+  wrap.innerHTML = html ? `<div class="bs-search-results">${html}</div>` : '';
+}
+
+function pickBs(id) {
+  filmModalBsId = id;
+  document.getElementById('bs-search-input').value = '';
+  document.getElementById('bs-search-results').innerHTML = '';
+  renderBsSelected();
+}
+
+function createAndPickBs() {
+  const name = document.getElementById('bs-search-input').value.trim();
+  if (!name) return;
+  const id = 'bs' + Date.now();
+  const bs = { id, name };
+  boxSets.push(bs);
+  save(null, null, bs);
+  pickBs(id);
+}
+
+// ── Wikipedia year lookup ──
+async function wikiLookup() {
+  const title = document.getElementById('m-title').value.trim();
+  if (!title) { document.getElementById('m-title').focus(); return; }
+
+  const btn = document.getElementById('wiki-btn');
+  const resultsEl = document.getElementById('wiki-results');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Searching…';
+  resultsEl.style.display = 'block';
+  resultsEl.innerHTML = '<div class="wiki-loading"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Searching Wikipedia…</div>';
+
+  try {
+    // Step 1: OpenSearch to get candidate article titles
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(title)}&limit=6&namespace=0&format=json&origin=*`;
+    const searchRes = await fetch(searchUrl);
+    const [, titles, , urls] = await searchRes.json();
+
+    if (!titles.length) {
+      resultsEl.innerHTML = '<div class="wiki-loading">No results found.</div>';
+      return;
+    }
+
+    // Step 2: Fetch extracts for all candidates in one call
+    const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(titles.join('|'))}&prop=extracts&exintro=1&explaintext=1&exsentences=2&format=json&origin=*`;
+    const extractRes = await fetch(extractUrl);
+    const extractData = await extractRes.json();
+    const pages = Object.values(extractData.query.pages);
+
+    // Build result items with year extracted from extract text
+    const items = titles.map((t, i) => {
+      const page = pages.find(p => p.title === t) || {};
+      const extract = page.extract || '';
+      // Try to find a 4-digit year in the extract (film/TV release year pattern)
+      const yearMatch = extract.match(/\b(19[0-9]{2}|20[0-9]{2})\b/);
+      const year = yearMatch ? yearMatch[1] : null;
+      // Detect TV show from extract keywords
+      const isTV = /television series|tv series|sitcom|miniseries|streaming series|anime series/i.test(extract);
+      return { title: t, extract: extract.slice(0, 100), year, isTV, url: urls[i] };
+    });
+
+    if (!items.length) {
+      resultsEl.innerHTML = '<div class="wiki-loading">No results found.</div>';
+      return;
+    }
+
+    resultsEl.innerHTML = items.map((item, i) => `
+      <div class="wiki-item" onclick="wikiSelect(${i})">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span class="wiki-item-title">${item.title}</span>
+          ${item.year ? `<span class="wiki-item-year">${item.year}</span>` : ''}
+        </div>
+        ${item.extract ? `<span class="wiki-item-desc">${item.extract.replace(/"/g,'&quot;')}…</span>` : ''}
+      </div>`).join('');
+
+    // Store results on the element for selection
+    resultsEl._wikiItems = items;
+
+  } catch(e) {
+    resultsEl.innerHTML = '<div class="wiki-loading">Lookup failed — check your connection.</div>';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-world-search"></i> Look up';
+  }
+}
+
+function wikiSelect(i) {
+  const resultsEl = document.getElementById('wiki-results');
+  const item = (resultsEl._wikiItems || [])[i];
+  if (!item) return;
+
+  if (item.year) document.getElementById('m-year').value = item.year;
+  if (item.isTV) document.getElementById('m-type').value = 'TV Show';
+
+  resultsEl.style.display = 'none';
+  resultsEl._wikiItems = null;
+}
+
+function wikiDismiss() {
+  const el = document.getElementById('wiki-results');
+  if (el) { el.style.display = 'none'; }
+}
+
+// ── Film modal ──
+function openAddFilm() {
+  editFilmId = null; filmModalBsId = null;
+  document.getElementById('film-modal-title').textContent = 'Add item';
+  document.getElementById('film-del-btn').style.display = 'none';
+  document.getElementById('m-title').value = '';
+  document.getElementById('m-year').value = '';
+  document.getElementById('m-type').value = 'Film';
+  document.getElementById('m-format').value = '';
+  document.getElementById('m-wanted').checked = false;
+  document.getElementById('m-watchlist').checked = false;
+  document.getElementById('m-favourite').checked = false;
+  document.getElementById('new-bs-name') && (document.getElementById('new-bs-name').value = '');
+  document.getElementById('bs-search-input').value = '';
+  document.getElementById('bs-search-results').innerHTML = '';
+  document.getElementById('wiki-results').style.display = 'none';
+  renderBsSelected();
+  document.getElementById('film-modal').classList.add('open');
+  setTimeout(() => document.getElementById('m-title').focus(), 50);
+}
+
+function openEditFilm(id) {
+  const f = films.find(x => x.id === id);
+  if (!f) return;
+  editFilmId = id; filmModalBsId = f.boxsetId || null;
+  document.getElementById('film-modal-title').textContent = 'Edit item';
+  document.getElementById('film-del-btn').style.display = 'flex';
+  document.getElementById('m-title').value = f.title;
+  document.getElementById('m-year').value = f.year || '';
+  document.getElementById('m-type').value = f.type || 'Film';
+  document.getElementById('m-format').value = f.format || '';
+  document.getElementById('m-wanted').checked = !!f.wanted;
+  document.getElementById('m-watchlist').checked = !!f.watchlist;
+  document.getElementById('m-favourite').checked = !!f.favourite;
+  document.getElementById('bs-search-input').value = '';
+  document.getElementById('bs-search-results').innerHTML = '';
+  document.getElementById('wiki-results').style.display = 'none';
+  renderBsSelected();
+  document.getElementById('film-modal').classList.add('open');
+}
+
+function saveFilm() {
+  const title = document.getElementById('m-title').value.trim();
+  if (!title) { document.getElementById('m-title').focus(); return; }
+  const data = {
+    title,
+    year: parseInt(document.getElementById('m-year').value) || null,
+    type: document.getElementById('m-type').value || 'Film',
+    format: document.getElementById('m-format').value || null,
+    wanted:    document.getElementById('m-wanted').checked,
+    watchlist: document.getElementById('m-watchlist').checked,
+    favourite: document.getElementById('m-favourite').checked,
+    boxsetId: filmModalBsId,
+  };
+  let savedFilm;
+  if (editFilmId) {
+    const idx = films.findIndex(f => f.id === editFilmId);
+    if (idx > -1) { films[idx] = { ...films[idx], ...data }; savedFilm = films[idx]; }
+  } else {
+    const newFilm = { id: Date.now(), ...data, added: Date.now() };
+    films.unshift(newFilm);
+    savedFilm = newFilm;
+  }
+  save(savedFilm); closeModal('film-modal'); render();
+}
+
+function deleteFilm() {
+  const f = films.find(x => x.id === editFilmId);
+  if (!f || !confirm(`Remove "${f.title}" from your collection?`)) return;
+  films = films.filter(x => x.id !== editFilmId);
+  save(null, editFilmId); closeModal('film-modal'); render();
+}
+
+// ── Box set management modal ──
+function openEditBs(id) {
+  const bs = boxSets.find(x => x.id === id);
+  if (!bs) return;
+  editBsId = id;
+  document.getElementById('bs-modal-title').textContent = 'Edit box set';
+  document.getElementById('bs-edit-name').value = bs.name;
+  renderBsFilmsList(id);
+  document.getElementById('bs-modal').classList.add('open');
+}
+
+function renderBsFilmsList(bsId) {
+  const members = bsFilms(bsId).sort((a,b) => (a.year||0)-(b.year||0)||sortTitle(a.title).localeCompare(sortTitle(b.title)));
+  const allFilms = films.filter(f => f.boxsetId !== bsId).sort((a,b) => sortTitle(a.title).localeCompare(sortTitle(b.title)));
+
+  let html = '';
+  // Films currently in the set
+  if (members.length) {
+    html += '<div class="bs-mgmt-list">';
+    members.forEach(f => {
+      html += `<div class="bs-mgmt-row">
+        <span class="bs-mgmt-name">${f.title}</span>
+        <span class="bs-mgmt-count">${f.year||''}</span>
+        <button class="bs-mgmt-del" onclick="removeFilmFromBs(${f.id})" title="Remove from set"><i class="ti ti-x"></i></button>
+      </div>`;
+    });
+    html += '</div>';
+  } else {
+    html += '<p style="font-size:13px;color:var(--text3);margin-bottom:10px">No items in this set yet.</p>';
+  }
+
+  // Add films picker
+  if (allFilms.length) {
+    html += `<div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:6px">Add items to this set</div>`;
+    html += '<div class="bs-mgmt-list">';
+    allFilms.slice(0,20).forEach(f => {
+      html += `<div class="bs-mgmt-row" style="cursor:pointer" onclick="addFilmToBs(${f.id})">
+        <span class="bs-mgmt-name" style="color:var(--text2)">${f.title}</span>
+        <span class="bs-mgmt-count">${f.year||''}</span>
+        <button class="bs-mgmt-del" style="color:var(--text3)" title="Add to set"><i class="ti ti-plus"></i></button>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  document.getElementById('bs-films-list').innerHTML = html;
+}
+
+function removeFilmFromBs(filmId) {
+  const f = films.find(x => x.id === filmId);
+  if (f) { f.boxsetId = null; save(f); renderBsFilmsList(editBsId); renderSidebar(); renderList(); }
+}
+
+function addFilmToBs(filmId) {
+  const f = films.find(x => x.id === filmId);
+  if (f) { f.boxsetId = editBsId; save(f); renderBsFilmsList(editBsId); renderSidebar(); renderList(); }
+}
+
+function saveBoxSet() {
+  const name = document.getElementById('bs-edit-name').value.trim();
+  if (!name) { document.getElementById('bs-edit-name').focus(); return; }
+  const bs = boxSets.find(x => x.id === editBsId);
+  if (bs) bs.name = name;
+  save(null, null, bs); closeModal('bs-modal'); render();
+}
+
+function deleteBoxSet() {
+  const bs = boxSets.find(x => x.id === editBsId);
+  if (!bs || !confirm(`Delete box set "${bs.name}"? Items will remain in your collection, just unassigned.`)) return;
+  films.forEach(f => { if (f.boxsetId === editBsId) f.boxsetId = null; });
+  boxSets = boxSets.filter(x => x.id !== editBsId);
+  save(null, null, null, editBsId); closeModal('bs-modal');
+  if (activeFilter === 'boxsets') setFilter('owned');
+  else render();
+}
+
+// ── View switching ──
+let currentView = 'collection';
+let chartInstances = {};
+
+function switchView(view) {
+  currentView = view;
+  document.getElementById('main-view').style.display = view === 'collection' ? '' : 'none';
+  document.getElementById('sidebar').style.display = view === 'collection' ? '' : 'none';
+  document.getElementById('dashboard-view').classList.toggle('visible', view === 'dashboard');
+  document.getElementById('tab-collection').classList.toggle('active', view === 'collection');
+  document.getElementById('tab-dashboard').classList.toggle('active', view === 'dashboard');
+  if (view === 'dashboard') renderDashboard();
+}
+
+// ── Dashboard drill-through ──
+function drillTo({ filter, format, year }) {
+  // Reset all filters then apply the requested ones
+  activeFilter = filter || 'owned';
+  activeFormat = format || null;
+  activeYear = year || null;
+  currentPage = 1;
+
+  // Sync the year dropdown to the chosen year
+  const yrSel = document.getElementById('year-sel');
+  if (yrSel) yrSel.value = activeYear || '';
+
+  switchView('collection');
+  render();
+}
+
+// ── Dashboard ──
+function renderDashboard() {
+  if (typeof Chart === 'undefined') return;
+
+  // Colours
+  const C = {
+    DVD:     '#60a5fa',
+    'Blu-Ray': '#4ade80',
+    '4K':    '#a78bfa',
+    '3D':    '#fb923c',
+    Film:    '#60a5fa',
+    'TV Show': '#a78bfa',
+    owned:   '#e8c547',
+    wanted:  '#fb923c',
+  };
+
+  function destroyChart(id) {
+    if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+  }
+
+  // ── Format donut ──
+  destroyChart('format');
+  const fmts = ['DVD', 'Blu-Ray', '4K', '3D'];
+  const fmtData = fmts.map(f => films.filter(x => x.format === f).length);
+  const fmtColors = fmts.map(f => C[f]);
+  chartInstances['format'] = new Chart(document.getElementById('chart-format'), {
+    type: 'doughnut',
+    data: { labels: fmts, datasets: [{ data: fmtData, backgroundColor: fmtColors, borderWidth: 0, hoverOffset: 4 }] },
+    options: {
+      cutout: '68%',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}` } } },
+      animation: { duration: 500 },
+      onClick(e, els) {
+        if (!els.length) return;
+        const fmt = fmts[els[0].index];
+        drillTo({ filter: 'owned', format: fmt });
+      }
+    }
+  });
+  document.getElementById('chart-format').style.cursor = 'pointer';
+  document.getElementById('legend-format').innerHTML = fmts.map((f,i) =>
+    fmtData[i] > 0 ? `<div class="dash-legend-item" style="cursor:pointer" onclick="drillTo({filter:'owned',format:'${f}'})"><span class="dash-legend-dot" style="background:${fmtColors[i]}"></span>${f}<span class="dash-legend-val">${fmtData[i]}</span></div>` : ''
+  ).join('') + `<div class="dash-legend-item" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px"><span style="color:var(--text3)">No format</span><span class="dash-legend-val">${films.filter(x=>!x.format).length}</span></div>`;
+
+  // ── Type donut ──
+  destroyChart('type');
+  const types = ['Film', 'TV Show'];
+  const typeFilterKeys = { 'Film': 'films', 'TV Show': 'tvshows' };
+  const typeData = types.map(t => films.filter(x => x.type === t).length);
+  const typeColors = types.map(t => C[t]);
+  chartInstances['type'] = new Chart(document.getElementById('chart-type'), {
+    type: 'doughnut',
+    data: { labels: types, datasets: [{ data: typeData, backgroundColor: typeColors, borderWidth: 0, hoverOffset: 4 }] },
+    options: {
+      cutout: '68%',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}` } } },
+      animation: { duration: 500 },
+      onClick(e, els) {
+        if (!els.length) return;
+        const t = types[els[0].index];
+        drillTo({ filter: typeFilterKeys[t] });
+      }
+    }
+  });
+  document.getElementById('chart-type').style.cursor = 'pointer';
+  document.getElementById('legend-type').innerHTML = types.map((t,i) =>
+    `<div class="dash-legend-item" style="cursor:pointer" onclick="drillTo({filter:'${typeFilterKeys[t]}'})"><span class="dash-legend-dot" style="background:${typeColors[i]}"></span>${t}<span class="dash-legend-val">${typeData[i]}</span></div>`
+  ).join('');
+
+  // ── By year bar ──
+  destroyChart('year');
+  const yearMap = {};
+  films.forEach(f => { if (f.year) { yearMap[f.year] = (yearMap[f.year]||0) + 1; } });
+  const years = Object.keys(yearMap).sort();
+  const yearCounts = years.map(y => yearMap[y]);
+  chartInstances['year'] = new Chart(document.getElementById('chart-year'), {
+    type: 'bar',
+    data: { labels: years, datasets: [{ data: yearCounts, backgroundColor: 'rgba(232,197,71,0.7)', borderColor: '#e8c547', borderWidth: 1, borderRadius: 4 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw} item${ctx.raw!==1?'s':''}` } } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#5a5a65', font: { size: 11 }, maxRotation: 45 } },
+        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#5a5a65', font: { size: 11 }, stepSize: 1 }, beginAtZero: true }
+      },
+      animation: { duration: 500 },
+      onClick(e, els) {
+        if (!els.length) return;
+        const yr = years[els[0].index];
+        drillTo({ filter: 'owned', year: yr });
+      }
+    }
+  });
+  document.getElementById('chart-year').style.cursor = 'pointer';
+}
+
+// ── Sort key: strip leading English stop words for alphabetical ordering ──
+const STOP_WORDS = /^(a |an |the )/i;
+function sortTitle(title) { return (title || '').replace(STOP_WORDS, '').trim(); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function overlayClick(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
+
+// ── Init ──
+load();
+render();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</body>
+</html>
