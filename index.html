@@ -184,20 +184,32 @@
   .pri-btn { background: var(--accent); color: #0a0a0b; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 8px 20px; border-radius: var(--radius); cursor: pointer; transition: opacity 0.12s; }
   .pri-btn:hover { opacity: 0.88; }
 
-  /* Wikipedia lookup */
-  .wiki-lookup-wrap { position: relative; }
-  .wiki-results { position: absolute; top: 100%; left: 0; right: 0; z-index: 200; background: var(--surface2); border: 1px solid var(--border-hover); border-radius: var(--radius); overflow: hidden; margin-top: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); max-height: 240px; overflow-y: auto; }
-  .wiki-item { display: flex; flex-direction: column; gap: 2px; padding: 9px 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
-  .wiki-item:last-child { border-bottom: none; }
-  .wiki-item:hover { background: var(--surface3); }
-  .wiki-item-title { font-size: 13px; color: var(--text); font-weight: 500; }
-  .wiki-item-desc { font-size: 11px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .wiki-item-year { font-size: 11px; color: var(--accent); font-weight: 500; }
-  .wiki-loading { padding: 10px 12px; font-size: 13px; color: var(--text3); display: flex; align-items: center; gap: 8px; }
-  .wiki-lookup-btn { flex-shrink: 0; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 9px 12px; border-radius: var(--radius); cursor: pointer; display: flex; align-items: center; gap: 5px; transition: background 0.12s, color 0.12s, border-color 0.12s; white-space: nowrap; }
-  .wiki-lookup-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border-hover); }
-  .wiki-lookup-btn:disabled { opacity: 0.4; cursor: default; }
-  .wiki-lookup-btn i { font-size: 14px; }
+  /* TMDB lookup */
+  .tmdb-lookup-wrap { position: relative; }
+  .tmdb-results { position: absolute; top: 100%; left: 0; right: 0; z-index: 200; background: var(--surface2); border: 1px solid var(--border-hover); border-radius: var(--radius); overflow: hidden; margin-top: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); max-height: 320px; overflow-y: auto; }
+  .tmdb-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+  .tmdb-item:last-child { border-bottom: none; }
+  .tmdb-item:hover { background: var(--surface3); }
+  .tmdb-item-poster { width: 32px; height: 48px; object-fit: cover; border-radius: 3px; flex-shrink: 0; background: var(--surface3); }
+  .tmdb-item-poster-blank { width: 32px; height: 48px; border-radius: 3px; flex-shrink: 0; background: var(--surface3); display:flex; align-items:center; justify-content:center; color: var(--text3); font-size:14px; }
+  .tmdb-item-info { flex: 1; min-width: 0; }
+  .tmdb-item-title { font-size: 13px; color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tmdb-item-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .tmdb-item-year { font-size: 11px; color: var(--accent); font-weight: 500; flex-shrink: 0; }
+  .tmdb-loading { padding: 10px 12px; font-size: 13px; color: var(--text3); display: flex; align-items: center; gap: 8px; }
+  .tmdb-lookup-btn { flex-shrink: 0; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 9px 12px; border-radius: var(--radius); cursor: pointer; display: flex; align-items: center; gap: 5px; transition: background 0.12s, color 0.12s, border-color 0.12s; white-space: nowrap; }
+  .tmdb-lookup-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border-hover); }
+  .tmdb-lookup-btn:disabled { opacity: 0.4; cursor: default; }
+  .tmdb-lookup-btn i { font-size: 14px; }
+  /* Poster + metadata preview shown after a result is selected */
+  .tmdb-selected { display: flex; gap: 12px; align-items: flex-start; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; margin-bottom: 4px; }
+  .tmdb-selected-poster { width: 52px; height: 78px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+  .tmdb-selected-poster-blank { width: 52px; height: 78px; border-radius: 4px; flex-shrink: 0; background: var(--surface3); display:flex; align-items:center; justify-content:center; color: var(--text3); font-size:20px; }
+  .tmdb-selected-info { flex: 1; min-width: 0; }
+  .tmdb-selected-title { font-size: 13px; font-weight: 500; color: var(--text); }
+  .tmdb-selected-meta { font-size: 11px; color: var(--text2); margin-top: 3px; line-height: 1.6; }
+  .tmdb-clear { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; padding: 2px; line-height: 1; flex-shrink: 0; }
+  .tmdb-clear:hover { color: var(--text); }
   @keyframes spin { to { transform: rotate(360deg); } }
   .nav-tabs { display: flex; gap: 4px; align-items: center; }
   .nav-tab { background: none; border: 1px solid transparent; color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: var(--radius); cursor: pointer; transition: background 0.12s, color 0.12s, border-color 0.12s; display: flex; align-items: center; gap: 6px; }
@@ -391,12 +403,13 @@
       <div class="fg">
         <label>Title *</label>
         <div style="display:flex;gap:8px;align-items:flex-start">
-          <input id="m-title" placeholder="e.g. The Dark Knight" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();wikiLookup()}">
-          <button class="wiki-lookup-btn" id="wiki-btn" onclick="wikiLookup()" title="Look up on Wikipedia"><i class="ti ti-world-search"></i> Look up</button>
+          <input id="m-title" placeholder="e.g. The Dark Knight" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();tmdbLookup()}">
+          <button class="tmdb-lookup-btn" id="tmdb-btn" onclick="tmdbLookup()" title="Look up on TMDB"><i class="ti ti-search"></i> Look up</button>
         </div>
-        <div class="wiki-lookup-wrap">
-          <div class="wiki-results" id="wiki-results" style="display:none"></div>
+        <div class="tmdb-lookup-wrap">
+          <div class="tmdb-results" id="tmdb-results" style="display:none"></div>
         </div>
+        <div id="tmdb-selected-wrap" style="display:none;margin-top:8px"></div>
       </div>
       <div class="fg-row">
         <div class="fg"><label>Year</label><input id="m-year" type="number" placeholder="2008" min="1888" max="2099"></div>
@@ -407,6 +420,14 @@
             <option value="TV Show">TV Show</option>
           </select>
         </div>
+      </div>
+      <div class="fg">
+        <label>Genre</label>
+        <input id="m-genre" placeholder="e.g. Action, Drama" style="color:var(--text2)">
+      </div>
+      <div class="fg">
+        <label>Cast</label>
+        <input id="m-cast" placeholder="e.g. Christian Bale, Heath Ledger" style="color:var(--text2)">
       </div>
       <div class="fg">
         <label>Format</label>
@@ -539,6 +560,9 @@ async function load() {
       favourite: r.favourite,
       boxsetId: r.boxset_id,
       added: r.added,
+      genre: r.genre || '',
+      cast: r.cast || '',
+      poster: r.poster || '',
     }));
 
     saveLocal();
@@ -595,6 +619,9 @@ async function saveFilmRemote(f) {
       favourite: f.favourite,
       boxset_id: f.boxsetId || null,
       added: f.added,
+      genre: f.genre || null,
+      cast: f.cast || null,
+      poster: f.poster || null,
     }),
   });
 }
@@ -740,10 +767,21 @@ function filmRowHtml(f) {
   const typeCls = (f.type || 'Film').replace(' ', '-');
   const typeBadge = `<span class="type-badge type-${typeCls}">${f.type || 'Film'}</span>`;
   const bsBadge = f.boxsetId ? `<span class="bs-badge"><i class="ti ti-package"></i>${bsName(f.boxsetId)}</span>` : '';
+  const posterThumb = f.poster
+    ? `<img src="${f.poster}" alt="" style="width:28px;height:42px;object-fit:cover;border-radius:3px;flex-shrink:0;margin-right:4px">`
+    : '';
+  const subParts = [f.year, f.genre].filter(Boolean);
+  const sub = subParts.length ? `<div class="film-sub">${subParts.join(' · ')}</div>` : '';
+  const castLine = f.cast ? `<div class="film-sub" style="color:var(--text3)">${f.cast}</div>` : '';
   return `<tr>
     <td style="width:auto">
-      <div class="film-title">${f.title}${typeBadge}${bsBadge}</div>
-      ${f.year ? `<div class="film-sub">${f.year}</div>` : ''}
+      <div style="display:flex;align-items:center;gap:6px">
+        ${posterThumb}
+        <div>
+          <div class="film-title">${f.title}${typeBadge}${bsBadge}</div>
+          ${sub}${castLine}
+        </div>
+      </div>
     </td>
     <td style="width:90px" class="col-format">${fmt}</td>
     <td class="c" style="width:46px"><button class="icon-btn ${f.wanted?'on-wanted':''}" onclick="toggle(${f.id},'wanted')" title="${f.wanted?'Wanted':'Mark wanted'}"><i class="ti ti-shopping-cart"></i></button></td>
@@ -904,86 +942,155 @@ function createAndPickBs() {
   pickBs(id);
 }
 
-// ── Wikipedia year lookup ──
-async function wikiLookup() {
+// ── TMDB lookup ──
+const TMDB_KEY = 'bd909413a8fb394b8d66b3ecdb649dec';
+const TMDB_IMG = 'https://image.tmdb.org/t/p/w92';
+const TMDB_IMG_FULL = 'https://image.tmdb.org/t/p/w185';
+
+function tmdbSelectedHtml(item) {
+  const posterEl = item.poster
+    ? `<img src="${item.poster}" alt="" class="tmdb-selected-poster">`
+    : `<div class="tmdb-selected-poster-blank"><i class="ti ti-photo"></i></div>`;
+  const meta = [item.year, item.type, item.genre].filter(Boolean).join(' · ');
+  return `<div class="tmdb-selected">
+    ${posterEl}
+    <div class="tmdb-selected-info">
+      <div class="tmdb-selected-title">${item.title}</div>
+      ${meta ? `<div class="tmdb-selected-meta">${meta}</div>` : ''}
+      ${item.cast ? `<div class="tmdb-selected-meta" style="color:var(--text3)">${item.cast}</div>` : ''}
+    </div>
+    <button class="tmdb-clear" onclick="tmdbClear()" title="Clear"><i class="ti ti-x"></i></button>
+  </div>`;
+}
+
+function tmdbClear() {
+  document.getElementById('tmdb-selected-wrap').style.display = 'none';
+  document.getElementById('tmdb-selected-wrap').innerHTML = '';
+  document.getElementById('tmdb-btn').dataset.poster = '';
+  document.getElementById('m-genre').value = '';
+  document.getElementById('m-cast').value = '';
+}
+
+async function tmdbLookup() {
   const title = document.getElementById('m-title').value.trim();
   if (!title) { document.getElementById('m-title').focus(); return; }
 
-  const btn = document.getElementById('wiki-btn');
-  const resultsEl = document.getElementById('wiki-results');
+  const btn = document.getElementById('tmdb-btn');
+  const resultsEl = document.getElementById('tmdb-results');
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Searching…';
   resultsEl.style.display = 'block';
-  resultsEl.innerHTML = '<div class="wiki-loading"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Searching Wikipedia…</div>';
+  resultsEl.innerHTML = '<div class="tmdb-loading"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Searching TMDB…</div>';
 
   try {
-    // Step 1: OpenSearch to get candidate article titles
-    const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(title)}&limit=6&namespace=0&format=json&origin=*`;
-    const searchRes = await fetch(searchUrl);
-    const [, titles, , urls] = await searchRes.json();
+    // Search both movies and TV in parallel
+    const [movieRes, tvRes] = await Promise.all([
+      fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}&page=1`),
+      fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}&page=1`),
+    ]);
+    const [movieData, tvData] = await Promise.all([movieRes.json(), tvRes.json()]);
 
-    if (!titles.length) {
-      resultsEl.innerHTML = '<div class="wiki-loading">No results found.</div>';
-      return;
-    }
+    // Combine results: movies first, then TV, up to 6 each
+    const movies = (movieData.results || []).slice(0, 6).map(r => ({
+      id: r.id, mediaType: 'movie',
+      title: r.title,
+      year: r.release_date ? r.release_date.slice(0, 4) : null,
+      poster: r.poster_path ? TMDB_IMG + r.poster_path : null,
+      posterFull: r.poster_path ? TMDB_IMG_FULL + r.poster_path : null,
+      overview: (r.overview || '').slice(0, 80),
+    }));
+    const shows = (tvData.results || []).slice(0, 6).map(r => ({
+      id: r.id, mediaType: 'tv',
+      title: r.name,
+      year: r.first_air_date ? r.first_air_date.slice(0, 4) : null,
+      poster: r.poster_path ? TMDB_IMG + r.poster_path : null,
+      posterFull: r.poster_path ? TMDB_IMG_FULL + r.poster_path : null,
+      overview: (r.overview || '').slice(0, 80),
+    }));
 
-    // Step 2: Fetch extracts for all candidates in one call
-    const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(titles.join('|'))}&prop=extracts&exintro=1&explaintext=1&exsentences=2&format=json&origin=*`;
-    const extractRes = await fetch(extractUrl);
-    const extractData = await extractRes.json();
-    const pages = Object.values(extractData.query.pages);
-
-    // Build result items with year extracted from extract text
-    const items = titles.map((t, i) => {
-      const page = pages.find(p => p.title === t) || {};
-      const extract = page.extract || '';
-      // Try to find a 4-digit year in the extract (film/TV release year pattern)
-      const yearMatch = extract.match(/\b(19[0-9]{2}|20[0-9]{2})\b/);
-      const year = yearMatch ? yearMatch[1] : null;
-      // Detect TV show from extract keywords
-      const isTV = /television series|tv series|sitcom|miniseries|streaming series|anime series/i.test(extract);
-      return { title: t, extract: extract.slice(0, 100), year, isTV, url: urls[i] };
-    });
+    const items = [...movies, ...shows];
 
     if (!items.length) {
-      resultsEl.innerHTML = '<div class="wiki-loading">No results found.</div>';
+      resultsEl.innerHTML = '<div class="tmdb-loading">No results found.</div>';
       return;
     }
 
-    resultsEl.innerHTML = items.map((item, i) => `
-      <div class="wiki-item" onclick="wikiSelect(${i})">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-          <span class="wiki-item-title">${item.title}</span>
-          ${item.year ? `<span class="wiki-item-year">${item.year}</span>` : ''}
+    resultsEl.innerHTML = items.map((item, i) => {
+      const posterEl = item.poster
+        ? `<img src="${item.poster}" alt="" class="tmdb-item-poster">`
+        : `<div class="tmdb-item-poster-blank"><i class="ti ti-photo"></i></div>`;
+      const badge = item.mediaType === 'tv'
+        ? `<span style="font-size:10px;background:rgba(167,139,250,0.15);color:var(--purple);padding:1px 5px;border-radius:3px;margin-left:4px">TV</span>`
+        : `<span style="font-size:10px;background:rgba(96,165,250,0.15);color:var(--blue);padding:1px 5px;border-radius:3px;margin-left:4px">Film</span>`;
+      return `<div class="tmdb-item" onclick="tmdbSelect(${i})">
+        ${posterEl}
+        <div class="tmdb-item-info">
+          <div class="tmdb-item-title">${item.title}${badge}</div>
+          ${item.overview ? `<div class="tmdb-item-meta">${item.overview}…</div>` : ''}
         </div>
-        ${item.extract ? `<span class="wiki-item-desc">${item.extract.replace(/"/g,'&quot;')}…</span>` : ''}
-      </div>`).join('');
+        ${item.year ? `<span class="tmdb-item-year">${item.year}</span>` : ''}
+      </div>`;
+    }).join('');
 
-    // Store results on the element for selection
-    resultsEl._wikiItems = items;
+    resultsEl._tmdbItems = items;
 
   } catch(e) {
-    resultsEl.innerHTML = '<div class="wiki-loading">Lookup failed — check your connection.</div>';
+    resultsEl.innerHTML = '<div class="tmdb-loading">Lookup failed — check your connection.</div>';
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="ti ti-world-search"></i> Look up';
+    btn.innerHTML = '<i class="ti ti-search"></i> Look up';
   }
 }
 
-function wikiSelect(i) {
-  const resultsEl = document.getElementById('wiki-results');
-  const item = (resultsEl._wikiItems || [])[i];
+async function tmdbSelect(i) {
+  const resultsEl = document.getElementById('tmdb-results');
+  const item = (resultsEl._tmdbItems || [])[i];
   if (!item) return;
-
-  if (item.year) document.getElementById('m-year').value = item.year;
-  if (item.isTV) document.getElementById('m-type').value = 'TV Show';
-
   resultsEl.style.display = 'none';
-  resultsEl._wikiItems = null;
+  resultsEl._tmdbItems = null;
+
+  // Fill basic fields immediately
+  document.getElementById('m-title').value = item.title;
+  if (item.year) document.getElementById('m-year').value = item.year;
+  document.getElementById('m-type').value = item.mediaType === 'tv' ? 'TV Show' : 'Film';
+
+  // Store poster URL on the button for saveFilm to pick up
+  document.getElementById('tmdb-btn').dataset.poster = item.posterFull || '';
+
+  // Show a "loading details" preview
+  const wrap = document.getElementById('tmdb-selected-wrap');
+  wrap.style.display = 'block';
+  wrap.innerHTML = tmdbSelectedHtml({ ...item, genre: '…', cast: 'Loading details…' });
+
+  // Fetch full details for genre + cast
+  try {
+    const endpoint = item.mediaType === 'tv'
+      ? `https://api.themoviedb.org/3/tv/${item.id}?api_key=${TMDB_KEY}&append_to_response=credits`
+      : `https://api.themoviedb.org/3/movie/${item.id}?api_key=${TMDB_KEY}&append_to_response=credits`;
+    const res = await fetch(endpoint);
+    const detail = await res.json();
+
+    const genre = (detail.genres || []).map(g => g.name).join(', ');
+    const credits = detail.credits || {};
+    const cast = (credits.cast || []).slice(0, 5).map(c => c.name).join(', ');
+
+    document.getElementById('m-genre').value = genre;
+    document.getElementById('m-cast').value = cast;
+
+    // Update preview
+    wrap.innerHTML = tmdbSelectedHtml({
+      title: item.title, year: item.year,
+      type: item.mediaType === 'tv' ? 'TV Show' : 'Film',
+      genre, cast, poster: item.posterFull,
+    });
+  } catch(e) {
+    // Details failed — leave genre/cast blank, keep basic preview
+    wrap.innerHTML = tmdbSelectedHtml({ ...item, genre: '', cast: '' });
+  }
 }
 
-function wikiDismiss() {
-  const el = document.getElementById('wiki-results');
+function tmdbDismiss() {
+  const el = document.getElementById('tmdb-results');
   if (el) { el.style.display = 'none'; }
 }
 
@@ -996,13 +1103,18 @@ function openAddFilm() {
   document.getElementById('m-year').value = '';
   document.getElementById('m-type').value = 'Film';
   document.getElementById('m-format').value = '';
+  document.getElementById('m-genre').value = '';
+  document.getElementById('m-cast').value = '';
   document.getElementById('m-wanted').checked = false;
   document.getElementById('m-watchlist').checked = false;
   document.getElementById('m-favourite').checked = false;
   document.getElementById('new-bs-name') && (document.getElementById('new-bs-name').value = '');
   document.getElementById('bs-search-input').value = '';
   document.getElementById('bs-search-results').innerHTML = '';
-  document.getElementById('wiki-results').style.display = 'none';
+  document.getElementById('tmdb-results').style.display = 'none';
+  document.getElementById('tmdb-selected-wrap').style.display = 'none';
+  document.getElementById('tmdb-selected-wrap').innerHTML = '';
+  document.getElementById('tmdb-btn').dataset.poster = '';
   renderBsSelected();
   document.getElementById('film-modal').classList.add('open');
   setTimeout(() => document.getElementById('m-title').focus(), 50);
@@ -1018,12 +1130,25 @@ function openEditFilm(id) {
   document.getElementById('m-year').value = f.year || '';
   document.getElementById('m-type').value = f.type || 'Film';
   document.getElementById('m-format').value = f.format || '';
+  document.getElementById('m-genre').value = f.genre || '';
+  document.getElementById('m-cast').value = f.cast || '';
   document.getElementById('m-wanted').checked = !!f.wanted;
   document.getElementById('m-watchlist').checked = !!f.watchlist;
   document.getElementById('m-favourite').checked = !!f.favourite;
   document.getElementById('bs-search-input').value = '';
   document.getElementById('bs-search-results').innerHTML = '';
-  document.getElementById('wiki-results').style.display = 'none';
+  document.getElementById('tmdb-results').style.display = 'none';
+  // Show existing poster preview if present
+  const wrap = document.getElementById('tmdb-selected-wrap');
+  if (f.poster) {
+    wrap.style.display = 'block';
+    wrap.innerHTML = tmdbSelectedHtml({ title: f.title, year: f.year, type: f.type, genre: f.genre, cast: f.cast, poster: f.poster });
+    document.getElementById('tmdb-btn').dataset.poster = f.poster;
+  } else {
+    wrap.style.display = 'none';
+    wrap.innerHTML = '';
+    document.getElementById('tmdb-btn').dataset.poster = '';
+  }
   renderBsSelected();
   document.getElementById('film-modal').classList.add('open');
 }
@@ -1033,13 +1158,16 @@ function saveFilm() {
   if (!title) { document.getElementById('m-title').focus(); return; }
   const data = {
     title,
-    year: parseInt(document.getElementById('m-year').value) || null,
-    type: document.getElementById('m-type').value || 'Film',
-    format: document.getElementById('m-format').value || null,
+    year:      parseInt(document.getElementById('m-year').value) || null,
+    type:      document.getElementById('m-type').value || 'Film',
+    format:    document.getElementById('m-format').value || null,
+    genre:     document.getElementById('m-genre').value.trim() || null,
+    cast:      document.getElementById('m-cast').value.trim() || null,
+    poster:    document.getElementById('tmdb-btn').dataset.poster || null,
     wanted:    document.getElementById('m-wanted').checked,
     watchlist: document.getElementById('m-watchlist').checked,
     favourite: document.getElementById('m-favourite').checked,
-    boxsetId: filmModalBsId,
+    boxsetId:  filmModalBsId,
   };
   let savedFilm;
   if (editFilmId) {
