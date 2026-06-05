@@ -1289,7 +1289,7 @@ function tmdbClear() {
   document.getElementById('m-cast').value = '';
 }
 
-async function tmdbLookup() {
+async function tmdbLookup(page = 1) {
   const title = document.getElementById('m-title').value.trim();
   if (!title) { document.getElementById('m-title').focus(); return; }
 
@@ -1298,18 +1298,20 @@ async function tmdbLookup() {
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Searching…';
   resultsEl.style.display = 'block';
-  resultsEl.innerHTML = '<div class="tmdb-loading"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Searching TMDB…</div>';
+
+  if (page === 1) {
+    resultsEl.innerHTML = '<div class="tmdb-loading"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Searching TMDB…</div>';
+    resultsEl._tmdbItems = [];
+  }
 
   try {
-    // Search both movies and TV in parallel
     const [movieRes, tvRes] = await Promise.all([
-      fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}&page=1`),
-      fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}&page=1`),
+      fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}&page=${page}`),
+      fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}&page=${page}`),
     ]);
     const [movieData, tvData] = await Promise.all([movieRes.json(), tvRes.json()]);
 
-    // Combine results: movies first, then TV, up to 6 each
-    const movies = (movieData.results || []).slice(0, 6).map(r => ({
+    const movies = (movieData.results || []).map(r => ({
       id: r.id, mediaType: 'movie',
       title: r.title,
       year: r.release_date ? r.release_date.slice(0, 4) : null,
@@ -1317,7 +1319,7 @@ async function tmdbLookup() {
       posterFull: r.poster_path ? TMDB_IMG_FULL + r.poster_path : null,
       overview: (r.overview || '').slice(0, 80),
     }));
-    const shows = (tvData.results || []).slice(0, 6).map(r => ({
+    const shows = (tvData.results || []).map(r => ({
       id: r.id, mediaType: 'tv',
       title: r.name,
       year: r.first_air_date ? r.first_air_date.slice(0, 4) : null,
@@ -1326,14 +1328,19 @@ async function tmdbLookup() {
       overview: (r.overview || '').slice(0, 80),
     }));
 
-    const items = [...movies, ...shows];
+    const newItems = [...movies, ...shows];
+    const existingItems = resultsEl._tmdbItems || [];
+    const allItems = [...existingItems, ...newItems];
+    resultsEl._tmdbItems = allItems;
 
-    if (!items.length) {
+    if (!allItems.length) {
       resultsEl.innerHTML = '<div class="tmdb-loading">No results found.</div>';
       return;
     }
 
-    resultsEl.innerHTML = items.map((item, i) => {
+    const hasMore = movieData.total_pages > page || tvData.total_pages > page;
+
+    resultsEl.innerHTML = allItems.map((item, i) => {
       const posterEl = item.poster
         ? `<img src="${item.poster}" alt="" class="tmdb-item-poster">`
         : `<div class="tmdb-item-poster-blank"><i class="ti ti-photo"></i></div>`;
@@ -1350,7 +1357,11 @@ async function tmdbLookup() {
       </div>`;
     }).join('');
 
-    resultsEl._tmdbItems = items;
+    if (hasMore) {
+      resultsEl.innerHTML += `<div class="tmdb-item" onclick="tmdbLookup(${page + 1})" style="justify-content:center;color:var(--text2);gap:6px">
+        <i class="ti ti-dots"></i> Load more results
+      </div>`;
+    }
 
   } catch(e) {
     resultsEl.innerHTML = '<div class="tmdb-loading">Lookup failed — check your connection.</div>';
