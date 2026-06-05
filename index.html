@@ -585,15 +585,17 @@ const SB_KEY = 'sb_publishable_padlTyNYJitVOJyKWBCjOQ_iipDxkLj';
 window.sbClient = supabase.createClient(SB_URL, SB_KEY);
 const sbClient = window.sbClient;
 let currentUser = null;
+let currentAccessToken = null;
 
 const ALLOWED_EMAIL = 'matthewhearne@gmail.com';
 const SITE_URL = 'https://matthewhearne.github.io/mediavault/';
 
 function isAdmin() { return !!currentUser && currentUser.email === ALLOWED_EMAIL; }
 
-function updateAuthUI(user) {
+function updateAuthUI(user, accessToken) {
   // Hard gate — never treat a non-whitelisted user as logged in
   currentUser = (user && user.email === ALLOWED_EMAIL) ? user : null;
+  currentAccessToken = currentUser ? accessToken : null;
   const btn = document.getElementById('auth-btn');
   const headerAddBtn = document.getElementById('header-add-btn');
   const fab = document.getElementById('fab-btn');
@@ -648,32 +650,31 @@ async function signOut() {
   updateAuthUI(null);
 }
 
-async function handleSession(user) {
+async function handleSession(user, accessToken) {
   if (user && user.email !== ALLOWED_EMAIL) {
-    // Null out immediately before any async work
     currentUser = null;
+    currentAccessToken = null;
     await sbClient.auth.signOut();
-    updateAuthUI(null);
+    updateAuthUI(null, null);
     alert('Access restricted — this collection is private.');
     return;
   }
-  updateAuthUI(user || null);
+  updateAuthUI(user || null, accessToken || null);
 }
 
 // Listen for auth state changes (handles redirect back from Google)
 sbClient.auth.onAuthStateChange((_event, session) => {
-  handleSession(session?.user || null);
+  handleSession(session?.user || null, session?.access_token || null);
 });
 
 // Check existing session on load
 sbClient.auth.getSession().then(({ data: { session } }) => {
-  handleSession(session?.user || null);
+  handleSession(session?.user || null, session?.access_token || null);
 });
 
 async function sbFetch(path, options = {}) {
-  // Use the user's session token if available, otherwise fall back to anon key
-  const { data: { session } } = await sbClient.auth.getSession();
-  const authToken = session?.access_token || SB_KEY;
+  // Use cached session token if available, otherwise fall back to anon key
+  const authToken = currentAccessToken || SB_KEY;
 
   const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
     ...options,
