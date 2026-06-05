@@ -57,13 +57,13 @@
 
   /* Sidebar actor search */
   .sb-search { position: relative; margin-bottom: 6px; }
-  .sb-search i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 13px; pointer-events: none; }
-  .sb-search input { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 7px 28px 7px 30px; border-radius: var(--radius); outline: none; transition: border-color 0.12s; }
+  .sb-search > i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 13px; pointer-events: none; }
+  .sb-search input { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 7px 32px 7px 30px; border-radius: var(--radius); outline: none; transition: border-color 0.12s; }
   .sb-search input:focus { border-color: var(--border-hover); }
   .sb-search input.has-value { border-color: rgba(232,197,71,0.5); background: var(--accent-dim); color: var(--accent); }
   .sb-search input.has-value::placeholder { color: rgba(232,197,71,0.4); }
   .sb-search input::placeholder { color: var(--text3); }
-  .sb-search .sb-search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; line-height: 1; padding: 2px; display: flex; align-items: center; }
+  .sb-search .sb-search-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; line-height: 1; padding: 4px; display: flex; align-items: center; z-index: 1; }
   .sb-search .sb-search-clear:hover { color: var(--text); }
 
   /* Sidebar */
