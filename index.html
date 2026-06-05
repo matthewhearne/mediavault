@@ -675,6 +675,7 @@ sbClient.auth.getSession().then(({ data: { session } }) => {
 async function sbFetch(path, options = {}) {
   // Use cached session token if available, otherwise fall back to anon key
   const authToken = currentAccessToken || SB_KEY;
+  console.log('[sbFetch]', path, 'token:', authToken?.slice(0,20), 'isAnon:', authToken === SB_KEY);
 
   const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
     ...options,
