@@ -1189,14 +1189,26 @@ function onActorSearch(val) {
   const trimmed = val.trim();
   activeCast = trimmed || null;
   currentPage = 1;
-  // Re-render list and stats but keep sidebar input focused — don't full render()
   renderStats();
   renderList();
-  // Update input styling and clear button without clobbering the input
+  // Update input styling
   const input = document.getElementById('sb-actor-input');
-  const clearBtn = document.querySelector('.sb-search .sb-search-clear');
   if (input) input.classList.toggle('has-value', !!trimmed);
-  if (clearBtn) clearBtn.style.display = trimmed ? '' : 'none';
+  // Inject or remove the clear button without re-rendering the whole sidebar
+  const wrap = input ? input.parentElement : null;
+  if (wrap) {
+    let clearBtn = wrap.querySelector('.sb-search-clear');
+    if (trimmed && !clearBtn) {
+      clearBtn = document.createElement('button');
+      clearBtn.className = 'sb-search-clear';
+      clearBtn.title = 'Clear';
+      clearBtn.innerHTML = '<i class="ti ti-x"></i>';
+      clearBtn.onclick = () => setCast(null);
+      wrap.appendChild(clearBtn);
+    } else if (!trimmed && clearBtn) {
+      clearBtn.remove();
+    }
+  }
 }
 function toggle(id, field) {
   if (!isAdmin()) return;
