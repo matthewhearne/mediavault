@@ -384,9 +384,12 @@
     .auth-btn span { display: none; }
     .auth-btn { padding: 6px 10px; }
   }
+  .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); background: var(--red-dim); border: 1px solid var(--red); color: var(--red); font-size: 13px; padding: 10px 20px; border-radius: var(--radius); z-index: 9999; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
+<div class="toast" id="toast"></div>
 <div class="app">
 
   <div class="header">
@@ -651,6 +654,15 @@ async function signOut() {
   updateAuthUI(null);
 }
 
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
 async function handleSession(user, accessToken) {
   if (user && user.email !== ALLOWED_EMAIL) {
     currentUser = null;
@@ -659,7 +671,7 @@ async function handleSession(user, accessToken) {
     updateAuthUI(null, null);
     if (!accessDeniedShown) {
       accessDeniedShown = true;
-      alert('Access restricted — this collection is private.');
+      showToast('Access restricted — this collection is private.');
     }
     return;
   }
