@@ -586,6 +586,7 @@ window.sbClient = supabase.createClient(SB_URL, SB_KEY);
 const sbClient = window.sbClient;
 let currentUser = null;
 let currentAccessToken = null;
+let accessDeniedShown = false;
 
 const ALLOWED_EMAIL = 'matthewhearne@gmail.com';
 const SITE_URL = 'https://matthewhearne.github.io/mediavault/';
@@ -656,9 +657,13 @@ async function handleSession(user, accessToken) {
     currentAccessToken = null;
     await sbClient.auth.signOut();
     updateAuthUI(null, null);
-    alert('Access restricted — this collection is private.');
+    if (!accessDeniedShown) {
+      accessDeniedShown = true;
+      alert('Access restricted — this collection is private.');
+    }
     return;
   }
+  accessDeniedShown = false;
   updateAuthUI(user || null, accessToken || null);
 }
 
@@ -675,7 +680,6 @@ sbClient.auth.getSession().then(({ data: { session } }) => {
 async function sbFetch(path, options = {}) {
   // Use cached session token if available, otherwise fall back to anon key
   const authToken = currentAccessToken || SB_KEY;
-  console.log('[sbFetch]', path, 'token:', authToken?.slice(0,20), 'isAnon:', authToken === SB_KEY);
 
   const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
     ...options,
