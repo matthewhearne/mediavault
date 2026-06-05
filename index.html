@@ -369,6 +369,21 @@
     .logo { font-size: 20px; letter-spacing: 2px; }
     .stat-n { font-size: 17px; }
   }
+
+  /* Auth */
+  .auth-btn { display: flex; align-items: center; gap: 7px; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 6px 14px; border-radius: var(--radius); cursor: pointer; transition: background 0.12s, color 0.12s, border-color 0.12s; white-space: nowrap; flex-shrink: 0; }
+  .auth-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border-hover); }
+  .auth-btn i { font-size: 15px; }
+  .auth-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+  .auth-wrap { position: relative; flex-shrink: 0; }
+  .auth-menu { position: absolute; top: calc(100% + 8px); right: 0; background: var(--surface2); border: 1px solid var(--border-hover); border-radius: var(--radius-lg); padding: 6px; min-width: 190px; box-shadow: 0 8px 24px rgba(0,0,0,0.45); z-index: 300; }
+  .auth-menu-name { font-size: 12px; color: var(--text3); padding: 6px 10px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .auth-menu-item { display: flex; align-items: center; gap: 8px; width: 100%; background: none; border: none; color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 10px; border-radius: var(--radius); cursor: pointer; text-align: left; transition: background 0.1s, color 0.1s; }
+  .auth-menu-item:hover { background: var(--surface3); color: var(--text); }
+  @media (max-width: 768px) {
+    .auth-btn span { display: none; }
+    .auth-btn { padding: 6px 10px; }
+  }
 </style>
 </head>
 <body>
@@ -381,9 +396,18 @@
       <button class="nav-tab active" id="tab-collection" onclick="switchView('collection')"><i class="ti ti-list"></i> Collection</button>
       <button class="nav-tab" id="tab-dashboard" onclick="switchView('dashboard')"><i class="ti ti-chart-bar"></i> Dashboard</button>
     </div>
-    <div style="display:flex;align-items:center;gap:16px">
+    <div style="display:flex;align-items:center;gap:12px">
       <div id="sync-status" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3)"></div>
-      <button class="add-btn" onclick="openAddFilm()"><i class="ti ti-plus"></i> Add item</button>
+      <button class="add-btn" id="header-add-btn" onclick="openAddFilm()" style="display:none"><i class="ti ti-plus"></i> Add item</button>
+      <div class="auth-wrap" id="auth-wrap">
+        <button class="auth-btn" id="auth-btn" onclick="handleAuthClick()">
+          <i class="ti ti-brand-google"></i><span>Sign in</span>
+        </button>
+        <div class="auth-menu" id="auth-menu" style="display:none">
+          <div class="auth-menu-name" id="auth-menu-name"></div>
+          <button class="auth-menu-item" onclick="signOut()"><i class="ti ti-logout"></i> Sign out</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -445,7 +469,7 @@
 
 <!-- These must be outside .app to avoid being clipped by overflow:hidden -->
 <div class="drawer-overlay" id="drawer-overlay" onclick="toggleDrawer()"></div>
-<button class="fab" onclick="openAddFilm()" aria-label="Add item"><i class="ti ti-plus"></i></button>
+<button class="fab" id="fab-btn" onclick="openAddFilm()" aria-label="Add item" style="display:none"><i class="ti ti-plus"></i></button>
 
 <!-- ── Film modal ── -->
 <div class="modal-overlay" id="film-modal" onclick="overlayClick(event,'film-modal')">
@@ -542,7 +566,9 @@
   </div>
 </div>
 
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
+const GOOGLE_CLIENT_ID = '625476206146-fjk8ot2sk4tg7pml0rpk2hv04rhtc2ml.apps.googleusercontent.com';
 const PER_PAGE = 15;
 let films = [], boxSets = [];
 let activeFilter = 'owned', activeFormat = null, activeYear = null, activeGenre = null, activeCast = null, currentPage = 1;
@@ -555,12 +581,105 @@ let filmModalBsId = null;
 const SB_URL = 'https://djkmpqxratnahyavfjau.supabase.co';
 const SB_KEY = 'sb_publishable_padlTyNYJitVOJyKWBCjOQ_iipDxkLj';
 
+// ── Auth ──
+window.sbClient = supabase.createClient(SB_URL, SB_KEY);
+const sbClient = window.sbClient;
+let currentUser = null;
+
+const ALLOWED_EMAIL = 'matthewhearne@gmail.com';
+const SITE_URL = 'https://matthewhearne.github.io/mediavault/';
+
+function isAdmin() { return !!currentUser && currentUser.email === ALLOWED_EMAIL; }
+
+function updateAuthUI(user) {
+  // Hard gate — never treat a non-whitelisted user as logged in
+  currentUser = (user && user.email === ALLOWED_EMAIL) ? user : null;
+  const btn = document.getElementById('auth-btn');
+  const headerAddBtn = document.getElementById('header-add-btn');
+  const fab = document.getElementById('fab-btn');
+  const isMobile = window.innerWidth <= 768;
+
+  if (currentUser) {
+    const avatarUrl = currentUser.user_metadata?.avatar_url;
+    const name = currentUser.user_metadata?.full_name || currentUser.email || 'Signed in';
+    btn.innerHTML = avatarUrl
+      ? `<img src="${avatarUrl}" class="auth-avatar" alt=""> <span>${name.split(' ')[0]}</span>`
+      : `<i class="ti ti-user-circle"></i> <span>${name.split(' ')[0]}</span>`;
+    document.getElementById('auth-menu-name').textContent = name;
+    headerAddBtn.style.display = isMobile ? 'none' : 'flex';
+    if (isMobile) { fab.style.display = ''; }
+  } else {
+    btn.innerHTML = '<i class="ti ti-brand-google"></i><span>Sign in</span>';
+    headerAddBtn.style.display = 'none';
+    fab.style.display = 'none';
+  }
+  render();
+}
+
+function handleAuthClick() {
+  const menu = document.getElementById('auth-menu');
+  if (currentUser) {
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  } else {
+    signIn();
+  }
+}
+
+// Close auth menu when clicking outside
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('auth-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('auth-menu').style.display = 'none';
+  }
+});
+
+async function signIn() {
+  const { error } = await sbClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: SITE_URL }
+  });
+  if (error) { console.error('Sign in error:', error); alert('Sign in failed: ' + error.message); }
+}
+
+async function signOut() {
+  document.getElementById('auth-menu').style.display = 'none';
+  await sbClient.auth.signOut();
+  currentUser = null;
+  updateAuthUI(null);
+}
+
+async function handleSession(user) {
+  if (user && user.email !== ALLOWED_EMAIL) {
+    // Null out immediately before any async work
+    currentUser = null;
+    await sbClient.auth.signOut();
+    updateAuthUI(null);
+    alert('Access restricted — this collection is private.');
+    return;
+  }
+  updateAuthUI(user || null);
+}
+
+// Listen for auth state changes (handles redirect back from Google)
+sbClient.auth.onAuthStateChange((_event, session) => {
+  handleSession(session?.user || null);
+});
+
+// Check existing session on load
+sbClient.auth.getSession().then(({ data: { session } }) => {
+  handleSession(session?.user || null);
+});
+
 async function sbFetch(path, options = {}) {
+  // Use the user's session token if available, otherwise fall back to anon key
+  const { data: { session } } = await sbClient.auth.getSession();
+  const authToken = session?.access_token || SB_KEY;
+
   const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
     ...options,
     headers: {
       'apikey': SB_KEY,
-      'Authorization': `Bearer ${SB_KEY}`,
+      'Authorization': `Bearer ${authToken}`,
       'Content-Type': 'application/json',
       'Prefer': options.prefer || '',
       ...options.headers,
@@ -853,7 +972,7 @@ function filmRowHtml(f) {
   const sub = subParts.length ? `<div class="film-sub">${subParts.join(' · ')}</div>` : '';
   const castLine = f.cast ? `<div class="film-sub" style="color:var(--text3)">${f.cast}</div>` : '';
   const fmtInline = fmt ? `<span class="fmt-inline">${fmt}</span>` : '';
-  return `<tr class="film-row" onclick="openEditFilm(${f.id})" style="cursor:pointer">
+  return `<tr class="film-row" ${isAdmin() ? `onclick="openEditFilm(${f.id})" style="cursor:pointer"` : ''}>
     <td style="width:auto">
       <div style="display:flex;align-items:center;gap:6px">
         ${posterThumb}
@@ -864,9 +983,9 @@ function filmRowHtml(f) {
       </div>
     </td>
     <td style="width:90px" class="col-format">${fmt}</td>
-    <td class="c col-wanted" style="width:46px"><button class="icon-btn ${f.wanted?'on-wanted':''}" onclick="event.stopPropagation();toggle(${f.id},'wanted')" title="${f.wanted?'Wanted':'Mark wanted'}"><i class="ti ti-shopping-cart"></i></button></td>
-    <td class="c col-watchlist" style="width:46px"><button class="icon-btn ${f.watchlist?'on-watchlist':''}" onclick="event.stopPropagation();toggle(${f.id},'watchlist')" title="${f.watchlist?'On watchlist':'Add to watchlist'}"><i class="ti ti-bookmark"></i></button></td>
-    <td class="c col-fav" style="width:46px"><button class="icon-btn ${f.favourite?'on-favourite':''}" onclick="event.stopPropagation();toggle(${f.id},'favourite')" title="${f.favourite?'Favourite':'Mark favourite'}"><i class="ti ti-heart"></i></button></td>
+    <td class="c col-wanted" style="width:46px"><button class="icon-btn ${f.wanted?'on-wanted':''}" ${isAdmin() ? `onclick="event.stopPropagation();toggle(${f.id},'wanted')"` : 'disabled style="opacity:0.4;cursor:default"'} title="${f.wanted?'Wanted':'Mark wanted'}"><i class="ti ti-shopping-cart"></i></button></td>
+    <td class="c col-watchlist" style="width:46px"><button class="icon-btn ${f.watchlist?'on-watchlist':''}" ${isAdmin() ? `onclick="event.stopPropagation();toggle(${f.id},'watchlist')"` : 'disabled style="opacity:0.4;cursor:default"'} title="${f.watchlist?'On watchlist':'Add to watchlist'}"><i class="ti ti-bookmark"></i></button></td>
+    <td class="c col-fav" style="width:46px"><button class="icon-btn ${f.favourite?'on-favourite':''}" ${isAdmin() ? `onclick="event.stopPropagation();toggle(${f.id},'favourite')"` : 'disabled style="opacity:0.4;cursor:default"'} title="${f.favourite?'Favourite':'Mark favourite'}"><i class="ti ti-heart"></i></button></td>
   </tr>`;
 }
 
@@ -914,7 +1033,7 @@ function renderList() {
           <i class="ti ti-package"></i>
           <span class="bs-group-name">${bs.name}</span>
           <span class="bs-group-meta">${members.length} film${members.length!==1?'s':''}</span>
-          <button class="bs-group-edit" onclick="openEditBs('${bs.id}')" title="Edit box set"><i class="ti ti-edit"></i></button>
+          ${isAdmin() ? `<button class="bs-group-edit" onclick="openEditBs('${bs.id}')" title="Edit box set"><i class="ti ti-edit"></i></button>` : ''}
         </div>
         <div class="table-wrap" style="border-radius:0;border:none">
           <table>${getTableHead()}<tbody>${rows}</tbody></table>
@@ -982,6 +1101,7 @@ function setCast(actor) {
   currentPage = 1; closeDrawer(); render();
 }
 function toggle(id, field) {
+  if (!isAdmin()) return;
   const f = films.find(x => x.id === id);
   if (f) { f[field] = !f[field]; save(f); render(); }
 }
@@ -1197,6 +1317,7 @@ function tmdbDismiss() {
 
 // ── Film modal ──
 function openAddFilm() {
+  if (!isAdmin()) return;
   editFilmId = null; filmModalBsId = null;
   document.getElementById('film-modal-title').textContent = 'Add item';
   document.getElementById('film-del-btn').style.display = 'none';
@@ -1222,6 +1343,7 @@ function openAddFilm() {
 }
 
 function openEditFilm(id) {
+  if (!isAdmin()) return;
   const f = films.find(x => x.id === id);
   if (!f) return;
   editFilmId = id; filmModalBsId = f.boxsetId || null;
@@ -1255,6 +1377,7 @@ function openEditFilm(id) {
 }
 
 function saveFilm() {
+  if (!isAdmin()) return;
   const title = document.getElementById('m-title').value.trim();
   if (!title) { document.getElementById('m-title').focus(); return; }
   const data = {
@@ -1283,6 +1406,7 @@ function saveFilm() {
 }
 
 function deleteFilm() {
+  if (!isAdmin()) return;
   const f = films.find(x => x.id === editFilmId);
   if (!f || !confirm(`Remove "${f.title}" from your collection?`)) return;
   films = films.filter(x => x.id !== editFilmId);
@@ -1291,6 +1415,7 @@ function deleteFilm() {
 
 // ── Box set management modal ──
 function openEditBs(id) {
+  if (!isAdmin()) return;
   const bs = boxSets.find(x => x.id === id);
   if (!bs) return;
   editBsId = id;
@@ -1338,16 +1463,19 @@ function renderBsFilmsList(bsId) {
 }
 
 function removeFilmFromBs(filmId) {
+  if (!isAdmin()) return;
   const f = films.find(x => x.id === filmId);
   if (f) { f.boxsetId = null; save(f); renderBsFilmsList(editBsId); renderSidebar(); renderList(); }
 }
 
 function addFilmToBs(filmId) {
+  if (!isAdmin()) return;
   const f = films.find(x => x.id === filmId);
   if (f) { f.boxsetId = editBsId; save(f); renderBsFilmsList(editBsId); renderSidebar(); renderList(); }
 }
 
 function saveBoxSet() {
+  if (!isAdmin()) return;
   const name = document.getElementById('bs-edit-name').value.trim();
   if (!name) { document.getElementById('bs-edit-name').focus(); return; }
   const bs = boxSets.find(x => x.id === editBsId);
@@ -1356,6 +1484,7 @@ function saveBoxSet() {
 }
 
 function deleteBoxSet() {
+  if (!isAdmin()) return;
   const bs = boxSets.find(x => x.id === editBsId);
   if (!bs || !confirm(`Delete box set "${bs.name}"? Items will remain in your collection, just unassigned.`)) return;
   films.forEach(f => { if (f.boxsetId === editBsId) f.boxsetId = null; });
@@ -1389,7 +1518,7 @@ function switchView(view) {
   // Hamburger stays visible on both views so the header height stays stable on mobile
   document.getElementById('hamburger-btn').style.opacity = view === 'collection' ? '' : '0';
   document.getElementById('hamburger-btn').style.pointerEvents = view === 'collection' ? '' : 'none';
-  document.querySelector('.fab').style.display = view === 'collection' ? '' : 'none';
+  document.querySelector('.fab') && (document.querySelector('.fab').style.display = (view === 'collection' && isAdmin()) ? '' : 'none');
   closeDrawer();
   if (view === 'dashboard') renderDashboard();
 }
