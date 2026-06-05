@@ -1894,5 +1894,73 @@ load();
 render();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// ── Service Worker (offline support) ──
+// Registered via blob URL so no separate .sw.js file is needed for a single-file deployment.
+if ('serviceWorker' in navigator) {
+  const CACHE = 'mediavault-v1';
+  const PRECACHE = [
+    location.href,
+    'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap',
+    'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css',
+    'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js',
+    'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
+  ];
+
+  const swCode = `
+    const CACHE = '${CACHE}';
+    const PRECACHE = ${JSON.stringify(PRECACHE)};
+
+    self.addEventListener('install', e => {
+      e.waitUntil(
+        caches.open(CACHE).then(cache =>
+          Promise.allSettled(PRECACHE.map(url => cache.add(url).catch(() => {})))
+        ).then(() => self.skipWaiting())
+      );
+    });
+
+    self.addEventListener('activate', e => {
+      e.waitUntil(
+        caches.keys().then(keys =>
+          Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+        ).then(() => self.clients.claim())
+      );
+    });
+
+    self.addEventListener('fetch', e => {
+      const url = e.request.url;
+      if (url.includes('supabase.co/rest') ||
+          url.includes('supabase.co/auth') ||
+          url.includes('themoviedb.org') ||
+          url.includes('fonts.gstatic.com')) {
+        return;
+      }
+      e.respondWith(
+        caches.match(e.request).then(cached => {
+          if (cached) return cached;
+          return fetch(e.request).then(response => {
+            if (e.request.method === 'GET' && response.ok) {
+              const clone = response.clone();
+              caches.open(CACHE).then(cache => cache.put(e.request, clone));
+            }
+            return response;
+          }).catch(() => {
+            if (e.request.mode === 'navigate') {
+              return caches.match(location.href);
+            }
+          });
+        })
+      );
+    });
+  `;
+
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl, { scope: '/' })
+    .then(() => console.log('MediaVault: service worker registered (offline ready)'))
+    .catch(e => console.warn('MediaVault: service worker registration failed', e));
+}
+</script>
 </body>
 </html>
