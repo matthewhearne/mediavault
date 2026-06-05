@@ -400,6 +400,7 @@
   @media (max-width: 768px) {
     .auth-btn span { display: none; }
     .auth-btn { padding: 6px 10px; }
+    .build-stamp { display: none !important; }
   }
   .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); background: var(--red-dim); border: 1px solid var(--red); color: var(--red); font-size: 13px; padding: 10px 20px; border-radius: var(--radius); z-index: 9999; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; }
   .toast.show { opacity: 1; }
@@ -418,6 +419,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:12px">
       <div id="sync-status" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3)"></div>
+      <div class="build-stamp" title="Build time" style="font-size:11px;color:var(--text3);white-space:nowrap;display:flex;align-items:center;gap:4px"><i class="ti ti-clock" style="font-size:12px"></i>Built: 05 Jun 2026 21:49</div>
       <button class="add-btn" id="header-add-btn" onclick="openAddFilm()" style="display:none"><i class="ti ti-plus"></i> Add item</button>
       <div class="auth-wrap" id="auth-wrap">
         <button class="auth-btn" id="auth-btn" onclick="handleAuthClick()">
