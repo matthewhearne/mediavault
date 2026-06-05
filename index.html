@@ -316,8 +316,8 @@
 
     /* Sidebar is position:fixed so remove it from the flex flow —
        without this its 214px desktop width still squeezes .main */
-    .body { display: block; }
-    .main { width: 100%; box-sizing: border-box; padding: 12px; }
+    .body { display: flex; flex-direction: column; overflow: hidden; }
+    .main { width: 100%; box-sizing: border-box; padding: 12px; flex: 1; overflow-y: auto; }
 
     /* Format badge moves into title cell on mobile */
     .fmt-inline { display: inline; }
