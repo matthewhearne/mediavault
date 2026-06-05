@@ -240,6 +240,7 @@
   /* Format badge inline in title cell — only shown on mobile */
   .fmt-inline { display: none; }
 
+  #pager-wrap-top { margin-bottom: 12px; }
   .filter-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
   .filter-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(232,197,71,0.3); background: var(--accent-dim); color: var(--accent); }
   .filter-chip button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 14px; line-height: 1; padding: 0; display: flex; align-items: center; opacity: 0.7; }
@@ -434,6 +435,7 @@
         </select>
       </div>
       <div id="filter-chips"></div>
+      <div id="pager-wrap-top"></div>
       <div id="list-wrap"></div>
       <div id="pager-wrap"></div>
     </div>
@@ -572,7 +574,7 @@
 <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 const GOOGLE_CLIENT_ID = '625476206146-fjk8ot2sk4tg7pml0rpk2hv04rhtc2ml.apps.googleusercontent.com';
-const PER_PAGE = 15;
+let perPage = 15;
 let films = [], boxSets = [];
 let activeFilter = 'owned', activeFormat = null, activeYear = null, activeGenre = null, activeCast = null, currentPage = 1;
 let editFilmId = null, editBsId = null;
@@ -1065,21 +1067,29 @@ function renderList() {
 
   // Normal paginated list
   const filtered = getFiltered();
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   if (currentPage > totalPages) currentPage = totalPages;
-  const slice = filtered.slice((currentPage-1)*PER_PAGE, currentPage*PER_PAGE);
+  const slice = filtered.slice((currentPage-1)*perPage, currentPage*perPage);
 
   if (!slice.length) {
     wrap.innerHTML = `<div class="empty"><i class="ti ti-movie-off"></i><p>No items match your filter.</p></div>`;
+    document.getElementById('pager-wrap-top').innerHTML = '';
     pagerEl.innerHTML = ''; return;
   }
 
   wrap.innerHTML = `<div class="table-wrap"><table>${getTableHead()}<tbody>${slice.map(filmRowHtml).join('')}</tbody></table></div>`;
 
+  const perPageSel = `<select class="ctrl" onchange="setPerPage(this.value)" title="Items per page" style="padding:5px 8px;font-size:12px">
+    ${[15,25,50,100].map(n => `<option value="${n}"${n===perPage?' selected':''}>${n} per page</option>`).join('')}
+  </select>`;
+
   if (totalPages <= 1) {
-    pagerEl.innerHTML = `<div class="pager"><span>${filtered.length} film${filtered.length!==1?'s':''}</span><span></span></div>`;
+    const simpleInfo = `<div class="pager"><span>${filtered.length} item${filtered.length!==1?'s':''}</span>${perPageSel}</div>`;
+    document.getElementById('pager-wrap-top').innerHTML = simpleInfo;
+    pagerEl.innerHTML = simpleInfo;
     return;
   }
+
   let pgBtns = '';
   for (let i = 1; i <= totalPages; i++) {
     if (totalPages > 9 && i > 2 && i < totalPages-1 && Math.abs(i-currentPage) > 1) {
@@ -1088,19 +1098,27 @@ function renderList() {
     }
     pgBtns += `<button class="pg-btn${i===currentPage?' active':''}" onclick="goPage(${i})">${i}</button>`;
   }
-  pagerEl.innerHTML = `<div class="pager">
-    <span>${filtered.length} film${filtered.length!==1?'s':''}</span>
+
+  const pagerHtml = `<div class="pager">
+    <span>${filtered.length} item${filtered.length!==1?'s':''}</span>
     <div class="pages">
       <button class="pg-btn" onclick="goPage(${currentPage-1})" ${currentPage<=1?'disabled':''}><i class="ti ti-chevron-left"></i></button>
       ${pgBtns}
       <button class="pg-btn" onclick="goPage(${currentPage+1})" ${currentPage>=totalPages?'disabled':''}><i class="ti ti-chevron-right"></i></button>
     </div>
-    <span>Page ${currentPage} of ${totalPages}</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="color:var(--text2);font-size:13px">Page ${currentPage} of ${totalPages}</span>
+      ${perPageSel}
+    </div>
   </div>`;
+
+  document.getElementById('pager-wrap-top').innerHTML = pagerHtml;
+  pagerEl.innerHTML = pagerHtml;
 }
 
 function render() { renderStats(); renderSidebar(); populateYearDropdown(); renderList(); }
 function goPage(p) { currentPage = p; renderList(); }
+function setPerPage(n) { perPage = parseInt(n); currentPage = 1; renderList(); }
 
 // ── Filters ──
 function setFilter(f) {
