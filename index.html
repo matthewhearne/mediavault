@@ -912,9 +912,9 @@ function getFiltered() {
       if (activeCast && !(f.cast || '').toLowerCase().includes(activeCast.toLowerCase())) return false;
       if (activeFilter === 'owned')      return !f.wanted;
       if (activeFilter === 'wanted')     return f.wanted;
-      if (activeFilter === 'watchlist')  return f.watchlist;
-      if (activeFilter === 'favourites') return f.favourite;
-      if (activeFilter === 'boxsets')    return !!f.boxsetId;
+      if (activeFilter === 'watchlist')  return !f.wanted && f.watchlist;
+      if (activeFilter === 'favourites') return !f.wanted && f.favourite;
+      if (activeFilter === 'boxsets')    return !f.wanted && !!f.boxsetId;
       if (activeFilter === 'films')      return !f.wanted && f.type === 'Film';
       if (activeFilter === 'tvshows')    return !f.wanted && f.type === 'TV Show';
       return !f.wanted;
