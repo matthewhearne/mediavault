@@ -614,7 +614,7 @@
 const GOOGLE_CLIENT_ID = '625476206146-fjk8ot2sk4tg7pml0rpk2hv04rhtc2ml.apps.googleusercontent.com';
 let perPage = 15;
 let films = [], boxSets = [];
-let activeFilter = 'owned', activeFormat = null, activeYear = null, activeGenre = null, activeCast = null, currentPage = 1;
+let activeFilter = 'owned', activeType = 'all', activeFormat = null, activeYear = null, activeGenre = null, activeCast = null, currentPage = 1;
 let editFilmId = null, editBsId = null;
 // tracks selected boxset id in film modal (null = none, string = id)
 let filmModalBsId = null;
@@ -898,6 +898,8 @@ function bsName(id) { const b = boxSets.find(x => x.id === id); return b ? b.nam
 function bsFilms(id) { return films.filter(f => f.boxsetId === id); }
 
 // ── Filtering ──
+function isOwned(f) { return !f.wanted && !!f.format; }
+
 function getFiltered() {
   const q = (document.getElementById('q').value || '').toLowerCase();
   activeYear = document.getElementById('year-sel').value || null;
@@ -910,14 +912,16 @@ function getFiltered() {
       if (window._decadeFilter && (Math.floor((f.year||0) / 10) * 10) !== window._decadeFilter) return false;
       if (activeGenre && !(f.genre || '').toLowerCase().split(',').map(g=>g.trim()).includes(activeGenre.toLowerCase())) return false;
       if (activeCast && !(f.cast || '').toLowerCase().includes(activeCast.toLowerCase())) return false;
-      if (activeFilter === 'owned')      return !f.wanted;
+      // Type filter
+      if (activeType === 'films'   && f.type !== 'Film')    return false;
+      if (activeType === 'tvshows' && f.type !== 'TV Show') return false;
+      // Status filter
+      if (activeFilter === 'owned')      return isOwned(f);
       if (activeFilter === 'wanted')     return f.wanted;
-      if (activeFilter === 'watchlist')  return !f.wanted && f.watchlist;
-      if (activeFilter === 'favourites') return !f.wanted && f.favourite;
-      if (activeFilter === 'boxsets')    return !f.wanted && !!f.boxsetId;
-      if (activeFilter === 'films')      return !f.wanted && f.type === 'Film';
-      if (activeFilter === 'tvshows')    return !f.wanted && f.type === 'TV Show';
-      return !f.wanted;
+      if (activeFilter === 'watchlist')  return f.watchlist;
+      if (activeFilter === 'favourites') return f.favourite;
+      if (activeFilter === 'boxsets')    return isOwned(f) && !!f.boxsetId;
+      return isOwned(f);
     })
     .sort((a, b) => {
       const s = document.getElementById('sort-sel').value;
@@ -937,10 +941,10 @@ function populateYearDropdown() {
 
 // ── Render stats ──
 function renderStats() {
-  const owned = films.filter(f=>!f.wanted).length;
+  const owned = films.filter(f=>isOwned(f)).length;
   const wanted = films.filter(f=>f.wanted).length;
-  const filmCount = films.filter(f=>!f.wanted && f.type==='Film').length;
-  const tvCount = films.filter(f=>!f.wanted && f.type==='TV Show').length;
+  const filmCount = films.filter(f=>isOwned(f) && f.type==='Film').length;
+  const tvCount = films.filter(f=>isOwned(f) && f.type==='TV Show').length;
   document.getElementById('stats-bar').innerHTML = `
     <div class="stat"><div class="stat-n">${owned}</div><div class="stat-l">Owned</div></div>
     <div class="stat"><div class="stat-n">${wanted}</div><div class="stat-l">Wanted</div></div>
@@ -951,33 +955,49 @@ function renderStats() {
 // ── Render sidebar ──
 function renderSidebar() {
   const counts = {
-    owned:      films.filter(f=>!f.wanted).length,
-    films:      films.filter(f=>!f.wanted && f.type==='Film').length,
-    tvshows:    films.filter(f=>!f.wanted && f.type==='TV Show').length,
+    owned:      films.filter(f=>isOwned(f)).length,
     wanted:     films.filter(f=>f.wanted).length,
     watchlist:  films.filter(f=>f.watchlist).length,
     favourites: films.filter(f=>f.favourite).length,
-    boxsets:    boxSets.length,
+    boxsets:    films.filter(f=>isOwned(f) && !!f.boxsetId).length,
+    all:        films.filter(f=>isOwned(f)).length,
+    films:      films.filter(f=>isOwned(f) && f.type==='Film').length,
+    tvshows:    films.filter(f=>isOwned(f) && f.type==='TV Show').length,
   };
   const fmtCounts = {};
-  ['DVD','Blu-Ray','4K','3D'].forEach(fmt => { fmtCounts[fmt] = films.filter(f=>!f.wanted && f.format===fmt).length; });
+  ['DVD','Blu-Ray','4K','3D'].forEach(fmt => { fmtCounts[fmt] = films.filter(f=>isOwned(f) && f.format===fmt).length; });
 
-  const libFilters = [
-    ['owned',      'ti-stack-2',      'Owned'],
-    ['films',      'ti-movie',        'Films'],
-    ['tvshows',    'ti-device-tv',    'TV Shows'],
+  // Type section
+  const typeFilters = [
+    ['all',     'ti-stack-2',   'All'],
+    ['films',   'ti-movie',     'Films'],
+    ['tvshows', 'ti-device-tv', 'TV Shows'],
+  ];
+  let html = '<div class="sb-section"><div class="sb-title">Type</div>';
+  typeFilters.forEach(([key, icon, label]) => {
+    const on = activeType === key ? 'active' : '';
+    html += `<button class="sb-btn ${on}" onclick="setType('${key}')">
+      <i class="ti ${icon}"></i><span class="sb-btn-label">${label}</span>
+      <span class="sb-count">${counts[key]}</span>
+    </button>`;
+  });
+  html += '</div>';
+
+  // Status section
+  const statusFilters = [
+    ['owned',      'ti-check',        'Owned'],
     ['wanted',     'ti-shopping-cart','Wanted'],
     ['watchlist',  'ti-bookmark',     'Watchlist'],
     ['favourites', 'ti-heart',        'Favourites'],
     ['boxsets',    'ti-package',      'Box sets'],
   ];
-
-  let html = '<div class="sb-section"><div class="sb-title">Library</div>';
-  libFilters.forEach(([key, icon, label]) => {
+  html += '<div class="sb-section"><div class="sb-title">Status</div>';
+  statusFilters.forEach(([key, icon, label]) => {
     const on = activeFilter === key ? 'active' : '';
+    const cnt = counts[key];
     html += `<button class="sb-btn ${on}" onclick="setFilter('${key}')">
       <i class="ti ${icon}"></i><span class="sb-btn-label">${label}</span>
-      <span class="sb-count">${counts[key]}</span>
+      <span class="sb-count">${cnt !== undefined ? cnt : ''}</span>
     </button>`;
   });
   html += '</div>';
@@ -996,7 +1016,7 @@ function renderSidebar() {
 
   // Genre section — only show if any films have genre data
   const genreMap = {};
-  films.filter(f => !f.wanted).forEach(f => {
+  films.filter(f => isOwned(f)).forEach(f => {
     if (!f.genre) return;
     f.genre.split(',').forEach(g => {
       const name = g.trim();
@@ -1172,6 +1192,9 @@ function setPerPage(n) { perPage = parseInt(n); currentPage = 1; renderList(); }
 // ── Filters ──
 function setFilter(f) {
   activeFilter = f; activeFormat = null; activeGenre = null; activeCast = null; window._decadeFilter = null; currentPage = 1; closeDrawer(); render();
+}
+function setType(t) {
+  activeType = t; currentPage = 1; closeDrawer(); render();
 }
 function toggleFormat(fmt) {
   activeFormat = activeFormat === fmt ? null : fmt;
@@ -1649,7 +1672,7 @@ function switchView(view) {
 let allActorsData = [];
 function renderAllActors() {
   const actorMap = {};
-  films.filter(f => !f.wanted).forEach(f => {
+  films.filter(f => isOwned(f)).forEach(f => {
     if (!f.cast) return;
     f.cast.split(',').forEach(a => {
       const name = a.trim();
@@ -1680,6 +1703,7 @@ function filterAllActors() {
 // ── Dashboard drill-through ──
 function drillTo({ filter, format, year, genre, cast }) {
   activeFilter = filter || 'owned';
+  activeType   = 'all';
   activeFormat = format || null;
   activeYear   = year   || null;
   activeGenre  = genre  || null;
@@ -1695,9 +1719,9 @@ function drillTo({ filter, format, year, genre, cast }) {
 function renderDashboard() {
   if (typeof Chart === 'undefined') return;
 
-  // All dashboard charts work from owned (non-wanted) items only,
+  // All dashboard charts work from owned items only,
   // so counts match what you see when you click through to the collection.
-  const owned = films.filter(f => !f.wanted);
+  const owned = films.filter(f => isOwned(f));
 
   // Colours
   const C = {
@@ -1768,7 +1792,7 @@ function renderDashboard() {
   // ── By decade bar ──
   destroyChart('year');
   const yearMap = {};
-  films.filter(f => !f.wanted).forEach(f => { if (f.year) { yearMap[f.year] = (yearMap[f.year]||0) + 1; } });
+  films.filter(f => isOwned(f)).forEach(f => { if (f.year) { yearMap[f.year] = (yearMap[f.year]||0) + 1; } });
   const decadeMap = {};
   Object.entries(yearMap).forEach(([yr, count]) => {
     const decade = Math.floor(parseInt(yr) / 10) * 10;
