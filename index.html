@@ -41,11 +41,13 @@
   html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.5; }
 
   .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-  .header { flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; }
-  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 4px; color: var(--text); }
+  .header { flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; height: 56px; gap: 16px; }
+  .header-right { display: flex; align-items: center; gap: 12px; min-width: 220px; justify-content: flex-end; margin-left: auto; }
+  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 4px; color: var(--text); flex-shrink: 0; }
+
   .logo span { color: var(--accent); }
 
-  .stats-bar { flex-shrink: 0; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border-bottom: 1px solid var(--border); }
+  .stats-bar { flex-shrink: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); background: var(--surface); border-bottom: 1px solid var(--border); }
   .stat { padding: 10px 20px; text-align: center; border-right: 1px solid var(--border); }
   .stat:last-child { border-right: none; }
   .stat-n { font-family: 'Bebas Neue', sans-serif; font-size: 28px; line-height: 1; color: var(--accent); }
@@ -297,12 +299,14 @@
     .header .logo      { order: 2; flex: 1; font-size: 22px; letter-spacing: 3px; }
     .header .add-btn   { display: none; }
     /* Sync status: right side of row 1 */
-    .header > div:last-child {
+    .header-right {
       order: 3;
       padding-right: 12px;
-      gap: 0;
+      gap: 8px;
+      min-width: auto;
+      margin-left: 0;
     }
-    .header > div:last-child .add-btn { display: none; }
+    .header-right .add-btn { display: none; }
     /* Row 2: nav tabs full width */
     .header .nav-tabs {
       order: 4;
@@ -403,6 +407,76 @@
   }
   .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); background: var(--red-dim); border: 1px solid var(--red); color: var(--red); font-size: 13px; padding: 10px 20px; border-radius: var(--radius); z-index: 9999; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; }
   .toast.show { opacity: 1; }
+
+  /* ── Diary ── */
+  .diary-view { display: none; flex: 1; overflow-y: auto; padding: 24px; }
+  .diary-view.visible { display: block; }
+  @media (max-width: 768px) { .diary-view { padding: 12px; } }
+  .diary-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .diary-toolbar .search-wrap { flex: 1; min-width: 160px; }
+
+  .diary-month-group { margin-bottom: 28px; }
+  .diary-month-label { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; color: var(--text2); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+
+  .diary-entry { display: flex; align-items: flex-start; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); position: relative; }
+  .diary-entry:last-child { border-bottom: none; }
+  .diary-entry:hover .diary-entry-actions { opacity: 1; }
+
+  .diary-date-col { flex-shrink: 0; width: 36px; text-align: center; padding-top: 2px; }
+  .diary-day { font-family: 'Bebas Neue', sans-serif; font-size: 22px; line-height: 1; color: var(--text); }
+  .diary-dow  { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); }
+
+  .diary-poster { width: 38px; height: 57px; object-fit: cover; border-radius: 3px; flex-shrink: 0; background: var(--surface2); }
+  .diary-poster-blank { width: 38px; height: 57px; border-radius: 3px; flex-shrink: 0; background: var(--surface2); display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:16px; }
+
+  .diary-info { flex: 1; min-width: 0; }
+  .diary-title { font-weight: 500; font-size: 14px; color: var(--text); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .diary-year  { font-size: 12px; color: var(--text3); font-weight: 400; }
+  .diary-meta  { display: flex; align-items: center; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+  .diary-stars { display: flex; align-items: center; gap: 1px; color: var(--accent); font-size: 13px; }
+  .diary-stars .half { position: relative; display: inline-block; overflow: hidden; width: 0.6em; }
+  .diary-notes { font-size: 12px; color: var(--text2); margin-top: 4px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  .source-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .source-collection { background: var(--green-dim);  color: var(--green); }
+  .source-streaming  { background: var(--blue-dim);   color: var(--blue); }
+  .source-cinema     { background: var(--purple-dim); color: var(--purple); }
+  .source-tv         { background: var(--purple-dim); color: var(--purple); }
+
+  .diary-entry-actions { opacity: 0; transition: opacity 0.12s; display: flex; align-items: center; gap: 2px; flex-shrink: 0; padding-top: 2px; }
+  @media (max-width: 768px) { .diary-entry-actions { opacity: 1; } }
+
+  /* Star rating input */
+  .star-input { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .star-input-group { display: flex; }
+  .star-input-group label { cursor: pointer; font-size: 22px; color: var(--surface3); transition: color 0.08s; padding: 0 1px; }
+  .star-input-group label:hover,
+  .star-input-group label.lit { color: var(--accent); }
+  .star-input-group input[type=radio] { display: none; }
+  .star-clear { background: none; border: none; color: var(--text3); font-size: 12px; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+  .star-clear:hover { color: var(--text); background: var(--surface2); }
+  .star-val-label { font-size: 12px; color: var(--text2); min-width: 32px; }
+
+  /* Log film modal: collection picker */
+  .collection-picker { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; max-height: 220px; overflow-y: auto; }
+  .collection-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text2); cursor: pointer; transition: background 0.1s, color 0.1s; }
+  .collection-item:last-child { border-bottom: none; }
+  .collection-item:hover { background: var(--surface3); color: var(--text); }
+  .collection-item img { width: 24px; height: 36px; object-fit: cover; border-radius: 2px; flex-shrink: 0; }
+  .collection-item-blank { width: 24px; height: 36px; border-radius: 2px; flex-shrink: 0; background: var(--surface3); display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3); }
+  .collection-item-info { flex: 1; min-width: 0; }
+  .collection-item-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .collection-item-year  { font-size: 11px; color: var(--text3); }
+
+  .diary-source-tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .diary-source-tab { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 5px 12px; border-radius: var(--radius); cursor: pointer; transition: background 0.1s, color 0.1s, border-color 0.1s; }
+  .diary-source-tab.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(232,197,71,0.3); }
+
+  .diary-empty { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .diary-empty i { font-size: 40px; display: block; margin-bottom: 12px; }
+
+  .diary-log-btn { display: flex; align-items: center; gap: 6px; background: var(--accent); color: #0a0a0b; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: var(--radius); cursor: pointer; white-space: nowrap; transition: opacity 0.12s; }
+  .diary-log-btn:hover { opacity: 0.88; }
 </style>
 </head>
 <body>
@@ -414,11 +488,11 @@
     <div class="logo">MEDIA<span>VAULT</span></div>
     <div class="nav-tabs">
       <button class="nav-tab active" id="tab-collection" onclick="switchView('collection')"><i class="ti ti-list"></i> Collection</button>
+      <button class="nav-tab" id="tab-diary" onclick="switchView('diary')"><i class="ti ti-notebook"></i> Diary</button>
       <button class="nav-tab" id="tab-dashboard" onclick="switchView('dashboard')"><i class="ti ti-chart-bar"></i> Dashboard</button>
     </div>
-    <div style="display:flex;align-items:center;gap:12px">
+    <div class="header-right">
       <div id="sync-status" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3)"></div>
-
       <button class="add-btn" id="header-add-btn" onclick="openAddFilm()" style="display:none"><i class="ti ti-plus"></i> Add item</button>
       <div class="auth-wrap" id="auth-wrap">
         <button class="auth-btn" id="auth-btn" onclick="handleAuthClick()">
@@ -506,6 +580,111 @@
         </div>
       </div>
       <div id="all-actors-chart"></div>
+    </div>
+
+    <!-- ── Diary view ── -->
+    <div id="diary-view" class="diary-view">
+      <div class="diary-toolbar">
+        <div class="search-wrap" style="flex:1;min-width:160px">
+          <i class="ti ti-search"></i>
+          <input type="text" id="diary-q" placeholder="Search diary…" oninput="renderDiary()">
+        </div>
+        <select class="ctrl" id="diary-year-sel" onchange="renderDiary()">
+          <option value="">All years</option>
+        </select>
+        <select class="ctrl" id="diary-source-sel" onchange="renderDiary()">
+          <option value="">All sources</option>
+          <option value="collection">Collection</option>
+          <option value="streaming">Streaming</option>
+          <option value="cinema">Cinema</option>
+          <option value="tv">TV</option>
+        </select>
+        <button class="diary-log-btn" id="diary-add-btn" onclick="openLogFilm()" style="display:none"><i class="ti ti-plus"></i> Log film</button>
+      </div>
+      <div id="diary-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Log film modal ── -->
+<div class="modal-overlay" id="log-modal" onclick="overlayClick(event,'log-modal')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:520px">
+    <div class="modal-head">
+      <div class="modal-title" id="log-modal-title">Log a film</div>
+      <button class="modal-close" onclick="closeModal('log-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Source tabs -->
+      <div class="fg">
+        <label>Pick from</label>
+        <div class="diary-source-tabs">
+          <button class="diary-source-tab active" id="log-tab-collection" onclick="switchLogTab('collection')"><i class="ti ti-package" style="font-size:13px"></i> My collection</button>
+          <button class="diary-source-tab" id="log-tab-tmdb" onclick="switchLogTab('tmdb')"><i class="ti ti-search" style="font-size:13px"></i> Search TMDB</button>
+        </div>
+
+        <!-- Collection picker -->
+        <div id="log-collection-panel">
+          <div style="position:relative;margin-bottom:6px">
+            <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+            <input id="log-coll-search" type="text" placeholder="Filter collection…" oninput="renderCollectionPicker()" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 12px 8px 32px;border-radius:var(--radius);outline:none">
+          </div>
+          <div class="collection-picker" id="log-coll-list"></div>
+        </div>
+
+        <!-- TMDB search panel -->
+        <div id="log-tmdb-panel" style="display:none">
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <input id="log-tmdb-title" placeholder="e.g. The Dark Knight" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 12px;border-radius:var(--radius);outline:none" onkeydown="if(event.key==='Enter'){event.preventDefault();logTmdbLookup()}">
+            <button class="tmdb-lookup-btn" id="log-tmdb-btn" onclick="logTmdbLookup()"><i class="ti ti-search"></i> Search</button>
+          </div>
+          <div class="tmdb-results" id="log-tmdb-results" style="display:none;position:relative;margin-top:6px;max-height:220px;overflow-y:auto"></div>
+        </div>
+
+        <!-- Selected film preview -->
+        <div id="log-selected-wrap" style="display:none;margin-top:10px"></div>
+      </div>
+
+      <!-- Watch date -->
+      <div class="fg">
+        <label>Date watched</label>
+        <input id="log-date" type="date" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 12px;border-radius:var(--radius);outline:none">
+      </div>
+
+      <!-- Rating -->
+      <div class="fg">
+        <label>Rating <span style="font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0">(optional)</span></label>
+        <div class="star-input">
+          <div class="star-input-group" id="star-input-group"></div>
+          <button class="star-clear" id="star-clear-btn" onclick="clearStarRating()" style="display:none" title="Clear rating"><i class="ti ti-x"></i></button>
+          <span class="star-val-label" id="star-val-label"></span>
+        </div>
+      </div>
+
+      <!-- Source -->
+      <div class="fg">
+        <label>How did you watch it? <span style="font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0">(optional)</span></label>
+        <select id="log-source" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 12px;border-radius:var(--radius);outline:none">
+          <option value="">— unspecified —</option>
+          <option value="collection">From my collection</option>
+          <option value="streaming">Streaming</option>
+          <option value="cinema">Cinema</option>
+          <option value="tv">TV</option>
+        </select>
+      </div>
+
+      <!-- Notes -->
+      <div class="fg">
+        <label>Notes <span style="font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0">(optional)</span></label>
+        <textarea id="log-notes" placeholder="Your thoughts…" rows="3" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 12px;border-radius:var(--radius);outline:none;resize:vertical;line-height:1.5"></textarea>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="del-btn" id="log-del-btn" style="display:none" onclick="deleteDiaryEntry()"><i class="ti ti-trash"></i> Delete</button>
+      <button class="sec-btn" onclick="closeModal('log-modal')">Cancel</button>
+      <button class="pri-btn" id="log-save-btn" onclick="saveDiaryEntry()">Save</button>
     </div>
   </div>
 </div>
@@ -652,12 +831,16 @@ function updateAuthUI(user, accessToken) {
       ? `<img src="${avatarUrl}" class="auth-avatar" alt=""> <span>${name.split(' ')[0]}</span>`
       : `<i class="ti ti-user-circle"></i> <span>${name.split(' ')[0]}</span>`;
     document.getElementById('auth-menu-name').textContent = name;
-    headerAddBtn.style.display = isMobile ? 'none' : 'flex';
-    if (isMobile) { fab.style.display = ''; }
+    headerAddBtn.style.display = (isMobile || currentView === 'diary') ? 'none' : 'flex';
+    if (isMobile) { fab.style.display = currentView === 'diary' ? 'none' : ''; }
+    const diaryAddBtn = document.getElementById('diary-add-btn');
+    if (diaryAddBtn) diaryAddBtn.style.display = currentView === 'diary' ? '' : 'none';
   } else {
     btn.innerHTML = '<i class="ti ti-brand-google"></i><span>Sign in</span>';
     headerAddBtn.style.display = 'none';
     fab.style.display = 'none';
+    const diaryAddBtn = document.getElementById('diary-add-btn');
+    if (diaryAddBtn) diaryAddBtn.style.display = 'none';
   }
   render();
 }
@@ -715,8 +898,31 @@ async function handleSession(user, accessToken) {
     }
     return;
   }
+  const wasAuthed = !!currentAccessToken;
   accessDeniedShown = false;
   updateAuthUI(user || null, accessToken || null);
+
+  // If we just got a token for the first time, re-fetch diary with auth so RLS passes
+  if (!wasAuthed && accessToken) {
+    try {
+      const sbDiary = await sbFetch('diary?select=*&order=watched_date.desc,added.desc');
+      diary = (sbDiary || []).map(r => ({
+        id: r.id,
+        title: r.title,
+        year: r.year,
+        poster: r.poster || '',
+        tmdbId: r.tmdb_id || null,
+        watchedDate: r.watched_date,
+        rating: r.rating != null ? r.rating : null,
+        notes: r.notes || '',
+        source: r.source || '',
+        added: r.added,
+      }));
+      saveDiaryLocal();
+      renderDiaryStats();
+      renderDiary();
+    } catch(e) { console.warn('Diary auth re-fetch failed:', e); }
+  }
 }
 
 // Listen for auth state changes (handles redirect back from Google)
@@ -773,13 +979,20 @@ async function load() {
   } catch(e) {}
   films.forEach(f => { if (!f.type) f.type = 'Film'; });
 
+  // Load diary cache
+  try {
+    const dRaw = JSON.parse(localStorage.getItem('mediavault_diary_v1') || 'null');
+    if (dRaw) diary = dRaw;
+  } catch(e) {}
+
   setSyncStatus('syncing', 'Syncing…');
   render();
 
   try {
-    const [sbBoxSets, sbItems] = await Promise.all([
+    const [sbBoxSets, sbItems, sbDiary] = await Promise.all([
       sbFetch('box_sets?select=*&order=name'),
       sbFetch('items?select=*&order=added.desc'),
+      sbFetch('diary?select=*&order=watched_date.desc,added.desc').catch(() => []),
     ]);
 
     boxSets = sbBoxSets.map(r => ({ id: r.id, name: r.name }));
@@ -802,6 +1015,23 @@ async function load() {
     saveLocal();
     setSyncStatus('ok', 'Synced');
     render();
+
+    // Process diary
+    diary = (sbDiary || []).map(r => ({
+      id: r.id,
+      title: r.title,
+      year: r.year,
+      poster: r.poster || '',
+      tmdbId: r.tmdb_id || null,
+      watchedDate: r.watched_date,
+      rating: r.rating != null ? r.rating : null,
+      notes: r.notes || '',
+      source: r.source || '',
+      added: r.added,
+    }));
+    saveDiaryLocal();
+    renderDiaryStats();
+    renderDiary();
   } catch(e) {
     console.error('Load error:', e);
     setSyncStatus('error', 'Sync failed');
@@ -1656,18 +1886,32 @@ function closeDrawer() {
 
 function switchView(view) {
   currentView = view;
-  document.getElementById('main-view').style.display       = view === 'collection' ? '' : 'none';
-  document.getElementById('sidebar').style.display         = view === 'collection' ? '' : 'none';
+  const isDiary = view === 'diary';
+  document.getElementById('main-view').style.display         = view === 'collection' ? '' : 'none';
+  document.getElementById('sidebar').style.display           = view === 'collection' ? '' : 'none';
   document.getElementById('dashboard-view').classList.toggle('visible', view === 'dashboard');
   document.getElementById('all-actors-view').classList.toggle('visible', view === 'all-actors');
+  document.getElementById('diary-view').classList.toggle('visible', isDiary);
   document.getElementById('tab-collection').classList.toggle('active', view === 'collection');
+  document.getElementById('tab-diary').classList.toggle('active', isDiary);
   document.getElementById('tab-dashboard').classList.toggle('active', view === 'dashboard');
-  document.getElementById('hamburger-btn').style.opacity = view === 'collection' ? '' : '0';
-  document.getElementById('hamburger-btn').style.pointerEvents = view === 'collection' ? '' : 'none';
-  document.querySelector('.fab') && (document.querySelector('.fab').style.display = (view === 'collection' && isAdmin()) ? '' : 'none');
+  document.getElementById('hamburger-btn').style.opacity      = view === 'collection' ? '' : '0';
+  document.getElementById('hamburger-btn').style.pointerEvents= view === 'collection' ? '' : 'none';
+
+  // FAB / add buttons
+  const fab = document.querySelector('.fab');
+  const headerAddBtn = document.getElementById('header-add-btn');
+  const diaryAddBtn = document.getElementById('diary-add-btn');
+  const isMobile = window.innerWidth <= 768;
+  if (fab) fab.style.display = (view === 'collection' && isAdmin() && isMobile) ? '' : 'none';
+  if (headerAddBtn) headerAddBtn.style.display = (view === 'collection' && isAdmin() && !isMobile) ? 'flex' : 'none';
+  if (diaryAddBtn) diaryAddBtn.style.display   = (isDiary && isAdmin()) ? '' : 'none';
+
   closeDrawer();
-  if (view === 'dashboard') renderDashboard();
+  if (view === 'dashboard') { renderDashboard(); renderStats(); }
   if (view === 'all-actors') renderAllActors();
+  if (isDiary) { renderDiaryStats(); renderDiary(); }
+  if (view === 'collection') renderStats();
 }
 
 // ── All actors view ──
@@ -1920,6 +2164,486 @@ function renderDashboard() {
   } else {
     castEl.innerHTML = '<p style="color:var(--text3);font-size:13px;padding:20px 0">No cast data yet — use the TMDB lookup when adding items.</p>';
   }
+}
+
+// ── Diary data ──
+let diary = []; // array of entry objects
+let editDiaryId = null;
+let logSelectedFilm = null; // { title, year, poster, tmdbId }
+let logCurrentRating = null; // null or 0.5–5 in 0.5 steps
+let logTab = 'collection'; // 'collection' | 'tmdb'
+
+// ── Diary remote helpers ──
+async function loadDiaryRemote() {
+  try {
+    const rows = await sbFetch('diary?select=*&order=watched_date.desc,added.desc');
+    diary = (rows || []).map(r => ({
+      id: r.id,
+      title: r.title,
+      year: r.year,
+      poster: r.poster || '',
+      tmdbId: r.tmdb_id || null,
+      watchedDate: r.watched_date,
+      rating: r.rating != null ? r.rating : null,
+      notes: r.notes || '',
+      source: r.source || '',
+      added: r.added,
+    }));
+    saveDiaryLocal();
+  } catch(e) {
+    // fall back to localStorage
+    try {
+      const raw = JSON.parse(localStorage.getItem('mediavault_diary_v1') || 'null');
+      if (raw) diary = raw;
+    } catch(_) {}
+  }
+}
+
+function saveDiaryLocal() {
+  try { localStorage.setItem('mediavault_diary_v1', JSON.stringify(diary)); } catch(e) {}
+}
+
+async function saveDiaryEntryRemote(e) {
+  await sbFetch('diary', {
+    method: 'POST',
+    headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      id: e.id,
+      title: e.title,
+      year: e.year || null,
+      poster: e.poster || null,
+      tmdb_id: e.tmdbId || null,
+      watched_date: e.watchedDate,
+      rating: e.rating != null ? e.rating : null,
+      notes: e.notes || null,
+      source: e.source || null,
+      added: e.added,
+    }),
+  });
+}
+
+async function deleteDiaryEntryRemote(id) {
+  await sbFetch(`diary?id=eq.${id}`, { method: 'DELETE' });
+}
+
+// ── Diary rendering ──
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function starsHtml(rating) {
+  if (rating == null) return '';
+  let html = '<span class="diary-stars">';
+  for (let i = 1; i <= 5; i++) {
+    if (rating >= i) {
+      html += '<i class="ti ti-star-filled"></i>';
+    } else if (rating >= i - 0.5) {
+      html += '<i class="ti ti-star-half-filled"></i>';
+    } else {
+      html += '<i class="ti ti-star" style="color:var(--surface3)"></i>';
+    }
+  }
+  html += '</span>';
+  return html;
+}
+
+function sourceBadgeHtml(source) {
+  if (!source) return '';
+  const map = {
+    collection: ['Collection', 'source-collection'],
+    streaming:  ['Streaming',  'source-streaming'],
+    cinema:     ['Cinema',     'source-cinema'],
+    tv:         ['TV',         'source-tv'],
+  };
+  const [label, cls] = map[source] || ['TV', 'source-tv'];
+  return `<span class="source-badge ${cls}">${label}</span>`;
+}
+
+function renderDiary() {
+  populateDiaryYearDropdown();
+  const q    = (document.getElementById('diary-q')?.value || '').toLowerCase();
+  const yrF  = document.getElementById('diary-year-sel')?.value || '';
+  const srcF = document.getElementById('diary-source-sel')?.value || '';
+
+  let entries = diary.filter(e => {
+    if (q && !e.title.toLowerCase().includes(q)) return false;
+    if (yrF && (!e.watchedDate || !e.watchedDate.startsWith(yrF))) return false;
+    if (srcF && e.source !== srcF) return false;
+    return true;
+  });
+
+  // Sort by watchedDate desc, then added desc
+  entries = entries.slice().sort((a, b) => {
+    if (a.watchedDate > b.watchedDate) return -1;
+    if (a.watchedDate < b.watchedDate) return 1;
+    return b.added - a.added;
+  });
+
+  const listEl = document.getElementById('diary-list');
+  if (!listEl) return;
+
+  if (!entries.length) {
+    listEl.innerHTML = `<div class="diary-empty"><i class="ti ti-notebook"></i><p>${diary.length ? 'No entries match your filter.' : 'No diary entries yet. Log your first film!'}</p></div>`;
+    return;
+  }
+
+  // Group by year-month
+  const groups = {};
+  entries.forEach(e => {
+    const key = e.watchedDate ? e.watchedDate.slice(0, 7) : 'unknown';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(e);
+  });
+
+  let html = '';
+  Object.keys(groups).sort().reverse().forEach(key => {
+    let monthLabel = key;
+    if (key !== 'unknown') {
+      const [yr, mo] = key.split('-');
+      monthLabel = `${MONTHS[parseInt(mo,10)-1]} ${yr}`;
+    }
+    html += `<div class="diary-month-group"><div class="diary-month-label">${monthLabel}</div>`;
+    groups[key].forEach(e => {
+      const posterEl = e.poster
+        ? `<img class="diary-poster" src="${e.poster}" alt="" loading="lazy">`
+        : `<div class="diary-poster-blank"><i class="ti ti-photo"></i></div>`;
+
+      let dayHtml = '';
+      if (e.watchedDate) {
+        // Parse as local date to avoid UTC offset shifting the day
+        const [yr, mo, dy] = e.watchedDate.split('-').map(Number);
+        const d = new Date(yr, mo - 1, dy);
+        dayHtml = `<div class="diary-day">${String(dy).padStart(2,'0')}</div><div class="diary-dow">${DAYS[d.getDay()]}</div>`;
+      }
+
+      html += `<div class="diary-entry">
+        <div class="diary-date-col">${dayHtml}</div>
+        ${posterEl}
+        <div class="diary-info">
+          <div class="diary-title">
+            ${e.title}
+            ${e.year ? `<span class="diary-year">${e.year}</span>` : ''}
+          </div>
+          <div class="diary-meta">
+            ${starsHtml(e.rating)}
+            ${sourceBadgeHtml(e.source)}
+          </div>
+          ${e.notes ? `<div class="diary-notes">${e.notes.replace(/</g,'&lt;')}</div>` : ''}
+        </div>
+        ${isAdmin() ? `<div class="diary-entry-actions">
+          <button class="icon-btn" onclick="openEditDiaryEntry('${e.id}')" title="Edit"><i class="ti ti-edit"></i></button>
+        </div>` : ''}
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  listEl.innerHTML = html;
+}
+
+function populateDiaryYearDropdown() {
+  const sel = document.getElementById('diary-year-sel');
+  if (!sel) return;
+  const current = sel.value;
+  const years = [...new Set(diary.map(e => e.watchedDate ? e.watchedDate.slice(0,4) : null).filter(Boolean))].sort().reverse();
+  sel.innerHTML = '<option value="">All years</option>' + years.map(y => `<option value="${y}"${y===current?' selected':''}>${y}</option>`).join('');
+}
+
+// ── Log film modal ──
+function openLogFilm() {
+  if (!isAdmin()) return;
+  editDiaryId = null;
+  logSelectedFilm = null;
+  logCurrentRating = null;
+  logTab = 'collection';
+
+  document.getElementById('log-modal-title').textContent = 'Log a film';
+  document.getElementById('log-del-btn').style.display = 'none';
+  document.getElementById('log-save-btn').textContent = 'Save';
+
+  // Default date = today
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm   = String(today.getMonth()+1).padStart(2,'0');
+  const dd   = String(today.getDate()).padStart(2,'0');
+  document.getElementById('log-date').value = `${yyyy}-${mm}-${dd}`;
+
+  document.getElementById('log-source').value = '';
+  document.getElementById('log-notes').value = '';
+  document.getElementById('log-selected-wrap').style.display = 'none';
+  document.getElementById('log-selected-wrap').innerHTML = '';
+  document.getElementById('log-coll-search').value = '';
+  document.getElementById('log-tmdb-title').value = '';
+  document.getElementById('log-tmdb-results').style.display = 'none';
+
+  buildStarInput();
+  switchLogTab('collection');
+  renderCollectionPicker();
+  document.getElementById('log-modal').classList.add('open');
+}
+
+function openEditDiaryEntry(id) {
+  if (!isAdmin()) return;
+  const e = diary.find(x => x.id === id);
+  if (!e) return;
+  editDiaryId = id;
+  logSelectedFilm = { title: e.title, year: e.year, poster: e.poster, tmdbId: e.tmdbId };
+  logCurrentRating = e.rating;
+
+  document.getElementById('log-modal-title').textContent = 'Edit diary entry';
+  document.getElementById('log-del-btn').style.display = 'flex';
+  document.getElementById('log-save-btn').textContent = 'Save changes';
+
+  document.getElementById('log-date').value = e.watchedDate || '';
+  document.getElementById('log-source').value = e.source || '';
+  document.getElementById('log-notes').value = e.notes || '';
+
+  document.getElementById('log-coll-search').value = '';
+  document.getElementById('log-tmdb-title').value = '';
+  document.getElementById('log-tmdb-results').style.display = 'none';
+
+  buildStarInput();
+  switchLogTab('collection');
+  renderCollectionPicker();
+  renderLogSelected();
+  document.getElementById('log-modal').classList.add('open');
+}
+
+function switchLogTab(tab) {
+  logTab = tab;
+  document.getElementById('log-tab-collection').classList.toggle('active', tab === 'collection');
+  document.getElementById('log-tab-tmdb').classList.toggle('active', tab === 'tmdb');
+  document.getElementById('log-collection-panel').style.display = tab === 'collection' ? '' : 'none';
+  document.getElementById('log-tmdb-panel').style.display = tab === 'tmdb' ? '' : 'none';
+}
+
+function renderCollectionPicker() {
+  const q = (document.getElementById('log-coll-search')?.value || '').toLowerCase();
+  const list = films
+    .filter(f => isOwned(f) && f.type === 'Film')
+    .filter(f => !q || f.title.toLowerCase().includes(q))
+    .sort((a,b) => sortTitle(a.title).localeCompare(sortTitle(b.title)));
+
+  const el = document.getElementById('log-coll-list');
+  if (!el) return;
+  if (!list.length) {
+    el.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--text3)">No films found.</div>';
+    return;
+  }
+  el.innerHTML = list.map(f => {
+    const posterEl = f.poster
+      ? `<img src="${f.poster}" alt="" style="width:24px;height:36px;object-fit:cover;border-radius:2px;flex-shrink:0">`
+      : `<div style="width:24px;height:36px;border-radius:2px;flex-shrink:0;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text3)"><i class="ti ti-photo"></i></div>`;
+    return `<div class="collection-item" onclick="selectFromCollection(${f.id})">
+      ${posterEl}
+      <div class="collection-item-info">
+        <div class="collection-item-title">${f.title}</div>
+        ${f.year ? `<div class="collection-item-year">${f.year}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectFromCollection(filmId) {
+  const f = films.find(x => x.id === filmId);
+  if (!f) return;
+  logSelectedFilm = { title: f.title, year: f.year, poster: f.poster || '', tmdbId: null };
+  if (!document.getElementById('log-source').value) {
+    document.getElementById('log-source').value = 'collection';
+  }
+  renderLogSelected();
+}
+
+function renderLogSelected() {
+  const wrap = document.getElementById('log-selected-wrap');
+  if (!logSelectedFilm) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  const posterEl = logSelectedFilm.poster
+    ? `<img src="${logSelectedFilm.poster}" alt="" class="tmdb-selected-poster">`
+    : `<div class="tmdb-selected-poster-blank"><i class="ti ti-photo"></i></div>`;
+  wrap.style.display = '';
+  wrap.innerHTML = `<div class="tmdb-selected">
+    ${posterEl}
+    <div class="tmdb-selected-info">
+      <div class="tmdb-selected-title">${logSelectedFilm.title}</div>
+      ${logSelectedFilm.year ? `<div class="tmdb-selected-meta">${logSelectedFilm.year}</div>` : ''}
+    </div>
+    <button class="tmdb-clear" onclick="clearLogSelected()" title="Clear"><i class="ti ti-x"></i></button>
+  </div>`;
+}
+
+function clearLogSelected() {
+  logSelectedFilm = null;
+  renderLogSelected();
+}
+
+// ── Star rating input ──
+function buildStarInput() {
+  const group = document.getElementById('star-input-group');
+  let html = '';
+  // 10 radio inputs for 0.5–5 in 0.5 steps (rendered as 5 stars, each split into half/full)
+  for (let i = 1; i <= 5; i++) {
+    const half = i - 0.5;
+    html += `
+      <label title="${half}" data-val="${half}" onclick="setStarRating(${half})"><i class="ti ti-star-half-filled"></i></label>
+      <label title="${i}"    data-val="${i}"    onclick="setStarRating(${i})"><i class="ti ti-star-filled"></i></label>`;
+  }
+  group.innerHTML = html;
+  updateStarDisplay();
+}
+
+function setStarRating(val) {
+  // Toggle off if same value clicked again
+  logCurrentRating = (logCurrentRating === val) ? null : val;
+  updateStarDisplay();
+}
+
+function clearStarRating() {
+  logCurrentRating = null;
+  updateStarDisplay();
+}
+
+function updateStarDisplay() {
+  const group = document.getElementById('star-input-group');
+  if (!group) return;
+  const labels = group.querySelectorAll('label');
+  labels.forEach(lbl => {
+    const v = parseFloat(lbl.dataset.val);
+    lbl.classList.toggle('lit', logCurrentRating != null && v <= logCurrentRating);
+  });
+  const clearBtn = document.getElementById('star-clear-btn');
+  const valLabel = document.getElementById('star-val-label');
+  if (clearBtn) clearBtn.style.display = logCurrentRating != null ? '' : 'none';
+  if (valLabel) valLabel.textContent = logCurrentRating != null ? `${logCurrentRating}/5` : '';
+}
+
+// ── TMDB search inside log modal ──
+async function logTmdbLookup() {
+  const title = (document.getElementById('log-tmdb-title')?.value || '').trim();
+  if (!title) return;
+  const btn = document.getElementById('log-tmdb-btn');
+  const resultsEl = document.getElementById('log-tmdb-results');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>';
+  resultsEl.style.display = 'block';
+  resultsEl.innerHTML = '<div class="tmdb-loading"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Searching…</div>';
+  resultsEl._items = [];
+
+  try {
+    const [mRes, tRes] = await Promise.all([
+      fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}`),
+      fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}`),
+    ]);
+    const [mData, tData] = await Promise.all([mRes.json(), tRes.json()]);
+    const items = [
+      ...(mData.results||[]).map(r => ({ id:r.id, mediaType:'movie', title:r.title, year:r.release_date?r.release_date.slice(0,4):null, poster:r.poster_path?TMDB_IMG_FULL+r.poster_path:null, thumb:r.poster_path?TMDB_IMG+r.poster_path:null })),
+      ...(tData.results||[]).map(r => ({ id:r.id, mediaType:'tv',    title:r.name,  year:r.first_air_date?r.first_air_date.slice(0,4):null, poster:r.poster_path?TMDB_IMG_FULL+r.poster_path:null, thumb:r.poster_path?TMDB_IMG+r.poster_path:null })),
+    ];
+    resultsEl._items = items;
+    if (!items.length) { resultsEl.innerHTML = '<div class="tmdb-loading">No results found.</div>'; return; }
+    resultsEl.innerHTML = items.map((item, i) => {
+      const posterEl = item.thumb
+        ? `<img src="${item.thumb}" alt="" class="tmdb-item-poster">`
+        : `<div class="tmdb-item-poster-blank"><i class="ti ti-photo"></i></div>`;
+      const badge = item.mediaType === 'tv'
+        ? `<span style="font-size:10px;background:rgba(167,139,250,0.15);color:var(--purple);padding:1px 5px;border-radius:3px;margin-left:4px">TV</span>`
+        : `<span style="font-size:10px;background:rgba(96,165,250,0.15);color:var(--blue);padding:1px 5px;border-radius:3px;margin-left:4px">Film</span>`;
+      return `<div class="tmdb-item" onclick="logTmdbSelect(${i})">${posterEl}<div class="tmdb-item-info"><div class="tmdb-item-title">${item.title}${badge}</div></div>${item.year?`<span class="tmdb-item-year">${item.year}</span>`:''}</div>`;
+    }).join('');
+  } catch(e) {
+    resultsEl.innerHTML = '<div class="tmdb-loading">Search failed.</div>';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-search"></i> Search';
+  }
+}
+
+function logTmdbSelect(i) {
+  const resultsEl = document.getElementById('log-tmdb-results');
+  const item = (resultsEl._items || [])[i];
+  if (!item) return;
+  resultsEl.style.display = 'none';
+  logSelectedFilm = { title: item.title, year: item.year, poster: item.poster || '', tmdbId: item.id };
+  renderLogSelected();
+}
+
+// ── Save / delete diary entry ──
+async function saveDiaryEntry() {
+  if (!isAdmin()) return;
+  if (!logSelectedFilm) { showToast('Please select a film first.'); return; }
+  const watchedDate = document.getElementById('log-date').value;
+  if (!watchedDate) { showToast('Please pick a date.'); return; }
+
+  const entry = {
+    id: editDiaryId || 'de' + Date.now(),
+    title: logSelectedFilm.title,
+    year: logSelectedFilm.year || null,
+    poster: logSelectedFilm.poster || '',
+    tmdbId: logSelectedFilm.tmdbId || null,
+    watchedDate,
+    rating: logCurrentRating,
+    notes: (document.getElementById('log-notes').value || '').trim(),
+    source: document.getElementById('log-source').value || '',
+    added: editDiaryId ? (diary.find(e=>e.id===editDiaryId)?.added || Date.now()) : Date.now(),
+  };
+
+  if (editDiaryId) {
+    const idx = diary.findIndex(e => e.id === editDiaryId);
+    if (idx > -1) diary[idx] = entry;
+  } else {
+    diary.unshift(entry);
+  }
+
+  saveDiaryLocal();
+  closeModal('log-modal');
+  renderDiary();
+  updateDiaryStatBar();
+
+  setSyncStatus('syncing', 'Saving…');
+  try {
+    await saveDiaryEntryRemote(entry);
+    setSyncStatus('ok', 'Saved');
+  } catch(e) {
+    console.error('Diary save error:', e);
+    setSyncStatus('error', 'Save failed');
+  }
+}
+
+async function deleteDiaryEntry() {
+  if (!isAdmin()) return;
+  const e = diary.find(x => x.id === editDiaryId);
+  if (!e || !confirm(`Remove diary entry for "${e.title}"?`)) return;
+  diary = diary.filter(x => x.id !== editDiaryId);
+  saveDiaryLocal();
+  closeModal('log-modal');
+  renderDiary();
+  updateDiaryStatBar();
+
+  setSyncStatus('syncing', 'Deleting…');
+  try {
+    await deleteDiaryEntryRemote(editDiaryId);
+    setSyncStatus('ok', 'Deleted');
+  } catch(err) {
+    console.error('Diary delete error:', err);
+    setSyncStatus('error', 'Delete failed');
+  }
+}
+
+function updateDiaryStatBar() {
+  // Only called when on diary view — updates the stat bar to show diary count
+  if (currentView === 'diary') renderDiaryStats();
+}
+
+function renderDiaryStats() {
+  const total      = diary.length;
+  const collection = diary.filter(e => e.source === 'collection').length;
+  const streaming  = diary.filter(e => e.source === 'streaming').length;
+  const cinema     = diary.filter(e => e.source === 'cinema').length;
+  const tv         = diary.filter(e => e.source === 'tv').length;
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat"><div class="stat-n">${total}</div><div class="stat-l">Logged</div></div>
+    <div class="stat"><div class="stat-n">${collection}</div><div class="stat-l">Collection</div></div>
+    <div class="stat"><div class="stat-n">${streaming}</div><div class="stat-l">Streaming</div></div>
+    <div class="stat"><div class="stat-n">${cinema}</div><div class="stat-l">Cinema</div></div>
+    <div class="stat"><div class="stat-n">${tv}</div><div class="stat-l">TV</div></div>`;
 }
 
 // ── Sort key: strip leading English stop words for alphabetical ordering ──
