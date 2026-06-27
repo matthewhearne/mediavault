@@ -350,7 +350,8 @@
     select.ctrl { flex: 1; font-size: 16px; }
 
     /* Table: all col visibility handled via mobile TABLE_HEAD (no colgroup) */
-    .col-format, th.col-format { display: none; }
+    .col-format, th.col-format,
+    .col-diary, th.col-diary { display: none; }
     .col-wanted, th.col-wanted,
     .col-watchlist, th.col-watchlist { display: none; }
     .col-fav, th.col-fav { display: none; }
@@ -1265,6 +1266,29 @@ function renderSidebar() {
 }
 
 // ── Film row HTML ──
+function getDiaryEntryForFilm(f) {
+  // Match by title (case-insensitive) — find the most recent watched entry
+  const titleLower = f.title.toLowerCase();
+  const matches = diary.filter(e => e.title.toLowerCase() === titleLower);
+  if (!matches.length) return null;
+  return matches.sort((a, b) => {
+    if (a.watchedDate > b.watchedDate) return -1;
+    if (a.watchedDate < b.watchedDate) return 1;
+    return 0;
+  })[0];
+}
+
+function diaryStarsHtml(rating) {
+  if (rating == null) return '';
+  let html = '<span style="display:inline-flex;align-items:center;gap:1px;color:var(--accent);font-size:11px">';
+  for (let i = 1; i <= 5; i++) {
+    if (rating >= i) html += '<i class="ti ti-star-filled"></i>';
+    else if (rating >= i - 0.5) html += '<i class="ti ti-star-half-filled"></i>';
+    else html += '<i class="ti ti-star" style="color:var(--surface3)"></i>';
+  }
+  return html + '</span>';
+}
+
 function filmRowHtml(f) {
   const fmt = f.format ? `<span class="fmt fmt-${f.format}">${f.format}</span>` : '';
   const typeCls = (f.type || 'Film').replace(' ', '-');
@@ -1277,6 +1301,19 @@ function filmRowHtml(f) {
   const sub = subParts.length ? `<div class="film-sub">${subParts.join(' · ')}</div>` : '';
   const castLine = f.cast ? `<div class="film-sub" style="color:var(--text3)">${f.cast}</div>` : '';
   const fmtInline = fmt ? `<span class="fmt-inline">${fmt}</span>` : '';
+
+  // Diary last-watched
+  const de = getDiaryEntryForFilm(f);
+  let diaryCell = '';
+  if (de) {
+    const [yr, mo, dy] = (de.watchedDate || '').split('-');
+    const dateStr = de.watchedDate ? `${String(dy).padStart(2,'0')}/${String(mo).padStart(2,'0')}/${yr}` : '';
+    diaryCell = `<div style="display:flex;flex-direction:column;gap:2px;align-items:flex-start">
+      ${de.rating != null ? diaryStarsHtml(de.rating) : ''}
+      ${dateStr ? `<span style="font-size:11px;color:var(--text3)">${dateStr}</span>` : ''}
+    </div>`;
+  }
+
   return `<tr class="film-row" ${isAdmin() ? `onclick="openEditFilm(${f.id})" style="cursor:pointer"` : ''}>
     <td style="width:auto">
       <div style="display:flex;align-items:center;gap:6px">
@@ -1288,6 +1325,7 @@ function filmRowHtml(f) {
       </div>
     </td>
     <td style="width:90px" class="col-format">${fmt}</td>
+    <td class="col-diary" style="width:100px;white-space:nowrap">${diaryCell}</td>
     <td class="c col-wanted" style="width:46px"><button class="icon-btn ${f.wanted?'on-wanted':''}" ${isAdmin() ? `onclick="event.stopPropagation();toggle(${f.id},'wanted')"` : 'disabled style="opacity:0.4;cursor:default"'} title="${f.wanted?'Wanted':'Mark wanted'}"><i class="ti ti-shopping-cart"></i></button></td>
     <td class="c col-watchlist" style="width:46px"><button class="icon-btn ${f.watchlist?'on-watchlist':''}" ${isAdmin() ? `onclick="event.stopPropagation();toggle(${f.id},'watchlist')"` : 'disabled style="opacity:0.4;cursor:default"'} title="${f.watchlist?'On watchlist':'Add to watchlist'}"><i class="ti ti-bookmark"></i></button></td>
     <td class="c col-fav" style="width:46px"><button class="icon-btn ${f.favourite?'on-favourite':''}" ${isAdmin() ? `onclick="event.stopPropagation();toggle(${f.id},'favourite')"` : 'disabled style="opacity:0.4;cursor:default"'} title="${f.favourite?'Favourite':'Mark favourite'}"><i class="ti ti-heart"></i></button></td>
@@ -1296,6 +1334,7 @@ function filmRowHtml(f) {
 
 const TABLE_HEAD_DESKTOP = `<thead><tr>
     <th>Film</th><th class="col-format" style="width:90px">Format</th>
+    <th class="col-diary" style="width:100px">Last watched</th>
     <th class="c col-wanted" style="width:46px" title="Wanted"><i class="ti ti-shopping-cart"></i></th>
     <th class="c col-watchlist" style="width:46px" title="Watchlist"><i class="ti ti-bookmark"></i></th>
     <th class="c col-fav" style="width:46px" title="Favourite"><i class="ti ti-heart"></i></th>

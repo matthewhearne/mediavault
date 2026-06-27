@@ -525,8 +525,7 @@ async function doSearch(id, q) {
       const thumb = f.poster
         ? `<img src="${f.poster}" class="film-drop-thumb" alt="">`
         : `<div class="film-drop-thumb-blank"><i class="ti ti-photo"></i></div>`;
-      const data = encodeURIComponent(JSON.stringify({ title:f.title, year:f.year, poster:f.poster||'', tmdbId:null }));
-      return `<div class="film-drop-item" onclick="selectFilm('${id}', '${data}', 'collection')">
+      return `<div class="film-drop-item" data-rowid="${id}" data-source="collection" data-film="${escAttr(JSON.stringify({ title:f.title, year:f.year, poster:f.poster||'', tmdbId:null }))}">
         ${thumb}
         <div class="film-drop-info">
           <div class="film-drop-title">${escHtml(f.title)}</div>
@@ -544,8 +543,7 @@ async function doSearch(id, q) {
         : `<div class="film-drop-thumb-blank"><i class="ti ti-photo"></i></div>`;
       const badgeCls = item.mediaType === 'tv' ? 'badge-tv' : 'badge-movie';
       const badgeTxt = item.mediaType === 'tv' ? 'TV' : 'Film';
-      const data = encodeURIComponent(JSON.stringify({ title:item.title, year:item.year, poster:item.poster||'', tmdbId:item.tmdbId }));
-      return `<div class="film-drop-item" onclick="selectFilm('${id}', '${data}', '')">
+      return `<div class="film-drop-item" data-rowid="${id}" data-source="" data-film="${escAttr(JSON.stringify({ title:item.title, year:item.year, poster:item.poster||'', tmdbId:item.tmdbId }))}">
         ${thumb}
         <div class="film-drop-info">
           <div class="film-drop-title">${escHtml(item.title)}</div>
@@ -560,9 +558,9 @@ async function doSearch(id, q) {
   if (dd) { dd.style.display = 'block'; dd.innerHTML = html; }
 }
 
-function selectFilm(id, dataEnc, autoSource) {
+function selectFilm(id, filmOrEnc, autoSource) {
   if (!rows[id]) return;
-  const film = JSON.parse(decodeURIComponent(dataEnc));
+  const film = (typeof filmOrEnc === 'string') ? JSON.parse(decodeURIComponent(filmOrEnc)) : filmOrEnc;
   rows[id].film = film;
   rows[id].error = null;
   if (autoSource && !rows[id].source) {
@@ -575,8 +573,17 @@ function selectFilm(id, dataEnc, autoSource) {
   updateSummary();
 }
 
-// Close dropdowns when clicking outside
+// Delegated click for film dropdown items (avoids apostrophe-in-onclick issues)
 document.addEventListener('click', e => {
+  const item = e.target.closest('.film-drop-item[data-film]');
+  if (item) {
+    const rowId  = item.dataset.rowid;
+    const source = item.dataset.source;
+    const film   = JSON.parse(item.dataset.film);
+    selectFilm(rowId, film, source);
+    return;
+  }
+  // Close dropdowns when clicking outside
   if (!e.target.closest('.film-search-wrap')) {
     document.querySelectorAll('.film-dropdown').forEach(d => d.style.display = 'none');
   }
@@ -705,6 +712,7 @@ function setSaving(on) {
 
 // ── Utils ──
 function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
 
 let toastTimer;
 function showToast(msg, type = '') {
