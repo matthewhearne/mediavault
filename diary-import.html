@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediaVault — Diary Import</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f11;
+    --surface: #17171a;
+    --surface2: #1f1f24;
+    --surface3: #26262c;
+    --border: rgba(255,255,255,0.08);
+    --text: #f0eee8;
+    --text2: #9a99a3;
+    --text3: #5a5a65;
+    --accent: #e8c547;
+    --accent-dim: rgba(232,197,71,0.12);
+    --green: #4ade80;
+    --green-dim: rgba(74,222,128,0.12);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --purple: #a78bfa;
+    --purple-dim: rgba(167,139,250,0.12);
+    --radius: 8px;
+  }
+
+  html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.5; }
+
+  /* ── Header ── */
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; position: sticky; top: 0; z-index: 100; }
+  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 4px; color: var(--text); text-decoration: none; }
+  .logo span { color: var(--accent); }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+
+  /* ── Auth ── */
+  .auth-btn { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 7px 14px; border-radius: var(--radius); cursor: pointer; transition: color 0.12s, border-color 0.12s; }
+  .auth-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
+  .auth-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
+
+  /* ── Page layout ── */
+  .page { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+  .page-title { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 3px; margin-bottom: 6px; }
+  .page-sub { font-size: 13px; color: var(--text3); margin-bottom: 28px; }
+  .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text3); text-decoration: none; margin-bottom: 20px; transition: color 0.12s; }
+  .back-link:hover { color: var(--text); }
+
+  /* ── Sign-in gate ── */
+  .gate { text-align: center; padding: 80px 20px; }
+  .gate i { font-size: 48px; color: var(--text3); display: block; margin-bottom: 16px; }
+  .gate p { color: var(--text2); margin-bottom: 24px; }
+  .pri-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #0a0a0b; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; padding: 10px 20px; border-radius: var(--radius); cursor: pointer; transition: opacity 0.12s; }
+  .pri-btn:hover { opacity: 0.88; }
+  .pri-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .sec-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 16px; border-radius: var(--radius); cursor: pointer; transition: color 0.12s, border-color 0.12s; }
+  .sec-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
+
+  /* ── Toolbar ── */
+  .import-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .import-toolbar .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .row-count { font-size: 13px; color: var(--text3); }
+
+  /* ── Progress ── */
+  .progress-bar-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; height: 8px; margin-bottom: 8px; }
+  .progress-bar { height: 100%; background: var(--accent); transition: width 0.2s; width: 0%; }
+  .progress-label { font-size: 12px; color: var(--text3); margin-bottom: 16px; }
+
+  /* ── Table ── */
+  .import-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; min-width: 860px; }
+  thead th { background: var(--surface); font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 500; padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  thead th:first-child { width: 36px; text-align: center; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.08s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr.row-ok   { background: rgba(74,222,128,0.04); }
+  tbody tr.row-err  { background: rgba(248,113,113,0.06); }
+  tbody tr.row-done { background: rgba(74,222,128,0.08); opacity: 0.6; }
+  tbody td { padding: 6px 8px; vertical-align: top; }
+  tbody td:first-child { text-align: center; padding-top: 10px; }
+
+  /* ── Inputs inside table ── */
+  .cell-input { width: 100%; background: transparent; border: 1px solid transparent; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 6px 8px; border-radius: 6px; outline: none; transition: border-color 0.12s, background 0.12s; }
+  .cell-input:focus { background: var(--surface2); border-color: rgba(255,255,255,0.15); }
+  .cell-input.has-error { border-color: var(--red) !important; background: var(--red-dim); }
+  input[type="date"].cell-input { color-scheme: dark; min-width: 130px; }
+  select.cell-input { cursor: pointer; min-width: 110px; }
+
+  /* ── Film cell ── */
+  .film-cell { position: relative; min-width: 220px; }
+  .film-search-wrap { position: relative; }
+  .film-search-input { width: 100%; background: transparent; border: 1px solid transparent; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 6px 8px; border-radius: 6px; outline: none; transition: border-color 0.12s, background 0.12s; }
+  .film-search-input:focus { background: var(--surface2); border-color: rgba(255,255,255,0.15); }
+  .film-search-input.has-error { border-color: var(--red) !important; background: var(--red-dim); }
+  .film-search-input.locked { color: var(--text); background: var(--surface2); border-color: var(--border); cursor: default; }
+
+  .film-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); z-index: 200; max-height: 240px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+  .film-drop-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.08s; }
+  .film-drop-item:last-child { border-bottom: none; }
+  .film-drop-item:hover { background: var(--surface2); }
+  .film-drop-thumb { width: 28px; height: 42px; object-fit: cover; border-radius: 3px; flex-shrink: 0; }
+  .film-drop-thumb-blank { width: 28px; height: 42px; border-radius: 3px; flex-shrink: 0; background: var(--surface3); display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3); }
+  .film-drop-info { flex: 1; min-width: 0; }
+  .film-drop-title { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .film-drop-meta { font-size: 11px; color: var(--text3); display: flex; gap: 6px; }
+  .film-drop-badge { font-size: 10px; padding: 1px 5px; border-radius: 3px; }
+  .badge-movie { background: var(--blue-dim); color: var(--blue); }
+  .badge-tv    { background: var(--purple-dim); color: var(--purple); }
+  .badge-coll  { background: var(--green-dim); color: var(--green); }
+  .film-drop-searching { padding: 12px; font-size: 13px; color: var(--text3); text-align: center; }
+
+  .film-locked-display { display: flex; align-items: center; gap: 8px; padding: 4px 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; }
+  .film-locked-thumb { width: 22px; height: 33px; object-fit: cover; border-radius: 2px; flex-shrink: 0; }
+  .film-locked-info { flex: 1; min-width: 0; }
+  .film-locked-title { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .film-locked-year { font-size: 11px; color: var(--text3); }
+  .film-clear-btn { background: none; border: none; color: var(--text3); cursor: pointer; padding: 2px; border-radius: 4px; display: flex; align-items: center; }
+  .film-clear-btn:hover { color: var(--red); }
+
+  /* ── Star input (compact) ── */
+  .star-cell { display: flex; align-items: center; gap: 1px; flex-wrap: nowrap; min-width: 90px; }
+  .star-cell label { cursor: pointer; font-size: 16px; color: var(--surface3); transition: color 0.08s; padding: 0; line-height: 1; }
+  .star-cell label.lit { color: var(--accent); }
+
+  /* ── Row status ── */
+  .row-num { font-size: 11px; color: var(--text3); font-family: 'Bebas Neue', sans-serif; }
+  .row-status-icon { font-size: 16px; }
+  .row-remove-btn { background: none; border: none; color: var(--text3); cursor: pointer; padding: 4px; border-radius: 4px; display: inline-flex; align-items: center; }
+  .row-remove-btn:hover { color: var(--red); }
+  .row-error-msg { font-size: 11px; color: var(--red); padding: 2px 8px 4px; }
+
+  /* ── Summary bar ── */
+  .summary-bar { display: flex; align-items: center; gap: 16px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-top: 16px; flex-wrap: wrap; }
+  .summary-stat { text-align: center; }
+  .summary-n { font-family: 'Bebas Neue', sans-serif; font-size: 24px; color: var(--accent); line-height: 1; }
+  .summary-l { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); }
+  .summary-bar .actions { margin-left: auto; display: flex; gap: 8px; }
+
+  /* ── Spin ── */
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Toast ── */
+  .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--border); color: var(--text); font-size: 13px; padding: 10px 20px; border-radius: var(--radius); z-index: 9999; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+  .toast.show { opacity: 1; }
+  .toast.success { border-color: var(--green); color: var(--green); }
+  .toast.error   { border-color: var(--red);   color: var(--red); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="index.html" class="logo">Media<span>Vault</span></a>
+  <div class="header-right">
+    <a href="index.html" class="back-link" style="margin:0"><i class="ti ti-arrow-left"></i> Back to app</a>
+    <button class="auth-btn" id="auth-btn" onclick="handleAuthClick()">
+      <i class="ti ti-brand-google"></i><span>Sign in</span>
+    </button>
+  </div>
+</div>
+
+<!-- Sign-in gate -->
+<div class="gate" id="gate">
+  <i class="ti ti-lock"></i>
+  <p>Sign in with your Google account to access the bulk diary importer.</p>
+  <button class="pri-btn" onclick="signIn()"><i class="ti ti-brand-google"></i> Sign in with Google</button>
+</div>
+
+<!-- Main importer (shown after sign-in) -->
+<div class="page" id="importer" style="display:none">
+  <a href="index.html" class="back-link"><i class="ti ti-arrow-left"></i> Back to MediaVault</a>
+  <div class="page-title">Bulk Diary Import</div>
+  <div class="page-sub">Add multiple diary entries at once. Search for a film by title, fill in the details, then save all to your diary when ready.</div>
+
+  <!-- Progress (hidden until saving) -->
+  <div id="progress-wrap" style="display:none">
+    <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    <div class="progress-label" id="progress-label">Saving…</div>
+  </div>
+
+  <div class="import-toolbar">
+    <button class="sec-btn" onclick="addRow()"><i class="ti ti-plus"></i> Add row</button>
+    <button class="sec-btn" onclick="addRows(10)"><i class="ti ti-plus"></i> Add 10 rows</button>
+    <span class="row-count" id="row-count"></span>
+    <div class="right">
+      <button class="sec-btn" onclick="clearAll()" id="clear-btn"><i class="ti ti-trash"></i> Clear all</button>
+      <button class="pri-btn" onclick="saveAll()" id="save-btn"><i class="ti ti-cloud-upload"></i> Save all to diary</button>
+    </div>
+  </div>
+
+  <div class="import-table-wrap">
+    <table id="import-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th style="min-width:220px">Film <span style="color:var(--red);font-size:10px">*</span></th>
+          <th>Date watched <span style="color:var(--red);font-size:10px">*</span></th>
+          <th>Rating</th>
+          <th>Source</th>
+          <th>Notes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="import-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="summary-bar" id="summary-bar">
+    <div class="summary-stat"><div class="summary-n" id="sum-total">0</div><div class="summary-l">Rows</div></div>
+    <div class="summary-stat"><div class="summary-n" id="sum-ready">0</div><div class="summary-l">Ready</div></div>
+    <div class="summary-stat"><div class="summary-n" id="sum-saved">0</div><div class="summary-l">Saved</div></div>
+    <div class="summary-stat"><div class="summary-n" id="sum-errors">0</div><div class="summary-l">Errors</div></div>
+    <div class="actions">
+      <button class="sec-btn" onclick="addRow()"><i class="ti ti-plus"></i> Add row</button>
+      <button class="pri-btn" onclick="saveAll()" id="save-btn-2"><i class="ti ti-cloud-upload"></i> Save all to diary</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+// ── Config ──
+const SB_URL  = 'https://djkmpqxratnahyavfjau.supabase.co';
+const SB_KEY  = 'sb_publishable_padlTyNYJitVOJyKWBCjOQ_iipDxkLj';
+const TMDB_KEY = 'bd909413a8fb394b8d66b3ecdb649dec';
+const TMDB_IMG = 'https://image.tmdb.org/t/p/w92';
+const ALLOWED_EMAIL = 'matthewhearne@gmail.com';
+const SITE_URL = 'https://matthewhearne.github.io/mediavault/diary-import.html';
+
+window.sbClient = supabase.createClient(SB_URL, SB_KEY);
+let currentUser = null;
+let currentToken = null;
+let collectionFilms = []; // loaded from mediavault.items
+
+// ── Auth ──
+sbClient.auth.onAuthStateChange((_e, session) => handleSession(session));
+sbClient.auth.getSession().then(({ data: { session } }) => handleSession(session));
+
+function handleSession(session) {
+  currentUser  = session?.user || null;
+  currentToken = session?.access_token || null;
+  const isAuthed = currentUser?.email === ALLOWED_EMAIL;
+  document.getElementById('gate').style.display     = isAuthed ? 'none' : '';
+  document.getElementById('importer').style.display = isAuthed ? '' : 'none';
+  const btn = document.getElementById('auth-btn');
+  if (currentUser) {
+    const av = currentUser.user_metadata?.avatar_url;
+    const name = (currentUser.user_metadata?.full_name || currentUser.email).split(' ')[0];
+    btn.innerHTML = av ? `<img src="${av}" class="auth-avatar" alt=""> <span>${name}</span>` : `<i class="ti ti-user-circle"></i> <span>${name}</span>`;
+  } else {
+    btn.innerHTML = '<i class="ti ti-brand-google"></i><span>Sign in</span>';
+  }
+  if (isAuthed) { loadCollection(); ensureRows(); }
+}
+
+function handleAuthClick() {
+  if (currentUser) signOut(); else signIn();
+}
+async function signIn() {
+  await sbClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: SITE_URL } });
+}
+async function signOut() {
+  await sbClient.auth.signOut();
+  location.reload();
+}
+
+// ── Supabase fetch ──
+async function sbFetch(path, options = {}) {
+  const token = currentToken || SB_KEY;
+  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Accept-Profile': 'mediavault',
+      'Content-Profile': 'mediavault',
+      ...(options.headers || {}),
+    },
+  });
+  if (!res.ok) { const e = await res.text(); throw new Error(`${res.status}: ${e}`); }
+  const t = await res.text();
+  return t ? JSON.parse(t) : null;
+}
+
+// ── Load collection films ──
+async function loadCollection() {
+  try {
+    const rows = await sbFetch("items?select=id,title,year,poster,type&order=title");
+    collectionFilms = (rows || []).filter(r => r.type === 'Film' || r.type === 'TV Show');
+    // Refresh any open dropdowns
+    rows && document.querySelectorAll('.film-dropdown').forEach(d => {
+      if (!d.classList.contains('hidden')) {
+        const rowId = d.closest('tr')?.dataset.rowid;
+        if (rowId) triggerSearch(rowId);
+      }
+    });
+  } catch(e) { console.warn('Could not load collection:', e); }
+}
+
+// ── Row management ──
+let rows = {}; // rowId → { film, rating, ... }
+let rowOrder = [];
+let rowCounter = 0;
+
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function addRow(date = '') {
+  const id = `r${++rowCounter}`;
+  rows[id] = { film: null, date: date || today(), rating: null, source: '', notes: '', status: 'empty', error: null, saved: false };
+  rowOrder.push(id);
+  renderRow(id);
+  updateSummary();
+  return id;
+}
+
+function addRows(n) {
+  for (let i = 0; i < n; i++) addRow();
+  updateSummary();
+}
+
+function removeRow(id) {
+  delete rows[id];
+  rowOrder = rowOrder.filter(r => r !== id);
+  document.querySelector(`tr[data-rowid="${id}"]`)?.remove();
+  updateSummary();
+}
+
+function clearAll() {
+  if (rowOrder.length && !confirm('Clear all rows?')) return;
+  rowOrder.slice().forEach(id => removeRow(id));
+  ensureRows();
+}
+
+function ensureRows() {
+  if (rowOrder.length === 0) {
+    addRows(5);
+  }
+}
+
+// ── Render a row ──
+function renderRow(id) {
+  const tbody = document.getElementById('import-tbody');
+  const rowNum = rowOrder.indexOf(id) + 1;
+  const r = rows[id];
+
+  // Create or find existing TR
+  let tr = document.querySelector(`tr[data-rowid="${id}"]`);
+  if (!tr) {
+    tr = document.createElement('tr');
+    tr.dataset.rowid = id;
+    tbody.appendChild(tr);
+  }
+
+  tr.className = r.saved ? 'row-done' : '';
+
+  tr.innerHTML = `
+    <td>
+      <div class="row-num">${rowNum}</div>
+    </td>
+
+    <!-- Film search cell -->
+    <td class="film-cell" id="film-cell-${id}">
+      ${r.film ? lockedFilmHtml(id, r.film) : searchFilmHtml(id)}
+    </td>
+
+    <!-- Date -->
+    <td><input type="date" class="cell-input" id="date-${id}" value="${r.date}" onchange="setField('${id}','date',this.value)" style="color-scheme:dark"></td>
+
+    <!-- Rating (5 half-stars = 10 values) -->
+    <td><div class="star-cell" id="stars-${id}">${buildStars(id, r.rating)}</div></td>
+
+    <!-- Source -->
+    <td>
+      <select class="cell-input" id="source-${id}" onchange="setField('${id}','source',this.value)">
+        <option value="" ${!r.source?'selected':''}>—</option>
+        <option value="collection" ${r.source==='collection'?'selected':''}>Collection</option>
+        <option value="streaming"  ${r.source==='streaming'?'selected':''}>Streaming</option>
+        <option value="cinema"     ${r.source==='cinema'?'selected':''}>Cinema</option>
+        <option value="tv"         ${r.source==='tv'?'selected':''}>TV</option>
+      </select>
+    </td>
+
+    <!-- Notes -->
+    <td><input type="text" class="cell-input" id="notes-${id}" value="${escHtml(r.notes||'')}" placeholder="Optional notes…" oninput="setField('${id}','notes',this.value)"></td>
+
+    <!-- Remove -->
+    <td style="width:36px;text-align:center">
+      ${r.saved
+        ? '<i class="ti ti-circle-check" style="color:var(--green);font-size:16px"></i>'
+        : `<button class="row-remove-btn" onclick="removeRow('${id}')" title="Remove row"><i class="ti ti-x"></i></button>`
+      }
+    </td>
+  `;
+
+  // Error row
+  if (r.error) {
+    const errTr = document.createElement('tr');
+    errTr.dataset.errfor = id;
+    errTr.innerHTML = `<td colspan="7"><div class="row-error-msg"><i class="ti ti-alert-circle"></i> ${r.error}</div></td>`;
+    tr.after(errTr);
+  } else {
+    document.querySelector(`tr[data-errfor="${id}"]`)?.remove();
+  }
+}
+
+function lockedFilmHtml(id, film) {
+  const thumb = film.poster
+    ? `<img src="${film.poster}" class="film-locked-thumb" alt="">`
+    : `<div class="film-locked-thumb" style="background:var(--surface3);display:flex;align-items:center;justify-content:center"><i class="ti ti-photo" style="font-size:11px;color:var(--text3)"></i></div>`;
+  return `<div class="film-locked-display">
+    ${thumb}
+    <div class="film-locked-info">
+      <div class="film-locked-title" title="${escHtml(film.title)}">${escHtml(film.title)}</div>
+      <div class="film-locked-year">${film.year || ''}</div>
+    </div>
+    <button class="film-clear-btn" onclick="clearFilm('${id}')" title="Change film"><i class="ti ti-x"></i></button>
+  </div>`;
+}
+
+function searchFilmHtml(id) {
+  return `<div class="film-search-wrap" id="search-wrap-${id}">
+    <input type="text" class="film-search-input" id="film-input-${id}"
+      placeholder="Search title…"
+      autocomplete="off"
+      oninput="onFilmInput('${id}', this.value)"
+      onfocus="onFilmFocus('${id}')"
+    >
+    <div class="film-dropdown" id="film-dropdown-${id}" style="display:none"></div>
+  </div>`;
+}
+
+function buildStars(id, rating) {
+  let html = '';
+  for (let i = 1; i <= 5; i++) {
+    const half = i - 0.5;
+    const halfLit = rating != null && rating >= half && rating < i;
+    const fullLit = rating != null && rating >= i;
+    html += `<label class="${halfLit?'lit':''}" title="${half}" onclick="setRating('${id}',${half},event)"><i class="ti ti-star-half-filled"></i></label>`;
+    html += `<label class="${fullLit?'lit':''}" title="${i}"   onclick="setRating('${id}',${i},event)"><i class="ti ti-star-filled"></i></label>`;
+  }
+  return html;
+}
+
+// ── Field setters ──
+function setField(id, field, value) {
+  if (!rows[id]) return;
+  rows[id][field] = value;
+  rows[id].error = null;
+  updateSummary();
+}
+
+function setRating(id, val, e) {
+  e.preventDefault();
+  if (!rows[id]) return;
+  rows[id].rating = (rows[id].rating === val) ? null : val;
+  document.getElementById(`stars-${id}`).innerHTML = buildStars(id, rows[id].rating);
+  updateSummary();
+}
+
+function clearFilm(id) {
+  if (!rows[id]) return;
+  rows[id].film = null;
+  rows[id].error = null;
+  document.getElementById(`film-cell-${id}`).innerHTML = searchFilmHtml(id);
+  updateSummary();
+}
+
+// ── TMDB / collection search ──
+let searchTimers = {};
+
+function onFilmInput(id, val) {
+  clearTimeout(searchTimers[id]);
+  const dd = document.getElementById(`film-dropdown-${id}`);
+  if (!val.trim()) { dd.style.display = 'none'; return; }
+  dd.style.display = 'block';
+  dd.innerHTML = '<div class="film-drop-searching"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Searching…</div>';
+  searchTimers[id] = setTimeout(() => doSearch(id, val.trim()), 350);
+}
+
+function onFilmFocus(id) {
+  const inp = document.getElementById(`film-input-${id}`);
+  if (inp?.value.trim()) onFilmInput(id, inp.value);
+}
+
+async function doSearch(id, q) {
+  const dd = document.getElementById(`film-dropdown-${id}`);
+  if (!dd) return;
+  const ql = q.toLowerCase();
+
+  // Collection matches first
+  const collMatches = collectionFilms.filter(f => f.title.toLowerCase().includes(ql)).slice(0, 5);
+
+  // TMDB search
+  let tmdbItems = [];
+  try {
+    const [mr, tr] = await Promise.all([
+      fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(q)}`),
+      fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_KEY}&query=${encodeURIComponent(q)}`),
+    ]);
+    const [md, td] = await Promise.all([mr.json(), tr.json()]);
+    tmdbItems = [
+      ...(md.results||[]).slice(0,6).map(r => ({ title:r.title, year:r.release_date?.slice(0,4)||null, poster:r.poster_path?TMDB_IMG+r.poster_path:null, tmdbId:r.id, mediaType:'movie' })),
+      ...(td.results||[]).slice(0,4).map(r => ({ title:r.name,  year:r.first_air_date?.slice(0,4)||null, poster:r.poster_path?TMDB_IMG+r.poster_path:null, tmdbId:r.id, mediaType:'tv' })),
+    ];
+  } catch(e) { /* silent */ }
+
+  if (!document.getElementById(`film-dropdown-${id}`)) return; // row removed
+
+  let html = '';
+
+  if (collMatches.length) {
+    html += `<div class="film-drop-searching" style="padding:6px 10px 4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3)">From collection</div>`;
+    html += collMatches.map(f => {
+      const thumb = f.poster
+        ? `<img src="${f.poster}" class="film-drop-thumb" alt="">`
+        : `<div class="film-drop-thumb-blank"><i class="ti ti-photo"></i></div>`;
+      const data = encodeURIComponent(JSON.stringify({ title:f.title, year:f.year, poster:f.poster||'', tmdbId:null }));
+      return `<div class="film-drop-item" onclick="selectFilm('${id}', '${data}', 'collection')">
+        ${thumb}
+        <div class="film-drop-info">
+          <div class="film-drop-title">${escHtml(f.title)}</div>
+          <div class="film-drop-meta"><span class="film-drop-badge badge-coll">Collection</span>${f.year||''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  if (tmdbItems.length) {
+    html += `<div class="film-drop-searching" style="padding:6px 10px 4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3)">From TMDB</div>`;
+    html += tmdbItems.map(item => {
+      const thumb = item.poster
+        ? `<img src="${item.poster}" class="film-drop-thumb" alt="">`
+        : `<div class="film-drop-thumb-blank"><i class="ti ti-photo"></i></div>`;
+      const badgeCls = item.mediaType === 'tv' ? 'badge-tv' : 'badge-movie';
+      const badgeTxt = item.mediaType === 'tv' ? 'TV' : 'Film';
+      const data = encodeURIComponent(JSON.stringify({ title:item.title, year:item.year, poster:item.poster||'', tmdbId:item.tmdbId }));
+      return `<div class="film-drop-item" onclick="selectFilm('${id}', '${data}', '')">
+        ${thumb}
+        <div class="film-drop-info">
+          <div class="film-drop-title">${escHtml(item.title)}</div>
+          <div class="film-drop-meta"><span class="film-drop-badge ${badgeCls}">${badgeTxt}</span>${item.year||''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  if (!html) html = '<div class="film-drop-searching">No results found.</div>';
+
+  if (dd) { dd.style.display = 'block'; dd.innerHTML = html; }
+}
+
+function selectFilm(id, dataEnc, autoSource) {
+  if (!rows[id]) return;
+  const film = JSON.parse(decodeURIComponent(dataEnc));
+  rows[id].film = film;
+  rows[id].error = null;
+  if (autoSource && !rows[id].source) {
+    rows[id].source = autoSource;
+    // Update source select if already rendered
+    const sel = document.getElementById(`source-${id}`);
+    if (sel) sel.value = autoSource;
+  }
+  document.getElementById(`film-cell-${id}`).innerHTML = lockedFilmHtml(id, film);
+  updateSummary();
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('.film-search-wrap')) {
+    document.querySelectorAll('.film-dropdown').forEach(d => d.style.display = 'none');
+  }
+});
+
+// ── Validation ──
+function validateRow(id) {
+  const r = rows[id];
+  if (r.saved) return true;
+  if (!r.film) { r.error = 'Select a film.'; return false; }
+  if (!r.date) { r.error = 'Date is required.'; return false; }
+  r.error = null;
+  return true;
+}
+
+function isRowEmpty(id) {
+  const r = rows[id];
+  return !r.film && !r.notes && !r.rating && r.source === '';
+}
+
+// ── Summary ──
+function updateSummary() {
+  const total  = rowOrder.length;
+  const saved  = rowOrder.filter(id => rows[id]?.saved).length;
+  const ready  = rowOrder.filter(id => !rows[id]?.saved && rows[id]?.film && rows[id]?.date).length;
+  const errors = rowOrder.filter(id => rows[id]?.error).length;
+  document.getElementById('sum-total').textContent  = total;
+  document.getElementById('sum-ready').textContent  = ready;
+  document.getElementById('sum-saved').textContent  = saved;
+  document.getElementById('sum-errors').textContent = errors;
+  document.getElementById('row-count').textContent  = `${total} row${total !== 1 ? 's' : ''}`;
+}
+
+// ── Save all ──
+async function saveAll() {
+  // Validate all non-empty rows
+  const toSave = rowOrder.filter(id => !rows[id].saved && !isRowEmpty(id));
+
+  if (!toSave.length) { showToast('No entries to save.', ''); return; }
+
+  // Run validation pass
+  let hasErrors = false;
+  toSave.forEach(id => {
+    if (!validateRow(id)) {
+      hasErrors = true;
+      renderRow(id); // show error inline
+    }
+  });
+  if (hasErrors) { showToast('Fix errors before saving.', 'error'); updateSummary(); return; }
+
+  const validRows = toSave.filter(id => !rows[id].error);
+  if (!validRows.length) return;
+
+  // Disable save buttons
+  setSaving(true);
+  const progressWrap = document.getElementById('progress-wrap');
+  const progressBar  = document.getElementById('progress-bar');
+  const progressLabel = document.getElementById('progress-label');
+  progressWrap.style.display = '';
+
+  let saved = 0, errors = 0;
+
+  for (const id of validRows) {
+    const r = rows[id];
+    progressLabel.textContent = `Saving ${saved + errors + 1} of ${validRows.length}: ${r.film.title}…`;
+    progressBar.style.width = `${Math.round(((saved + errors) / validRows.length) * 100)}%`;
+
+    const entry = {
+      id: 'de' + Date.now() + Math.random().toString(36).slice(2,6),
+      title: r.film.title,
+      year: r.film.year ? parseInt(r.film.year) : null,
+      poster: r.film.poster || null,
+      tmdb_id: r.film.tmdbId || null,
+      watched_date: r.date,
+      rating: r.rating,
+      notes: r.notes || null,
+      source: r.source || null,
+      added: Date.now(),
+    };
+
+    try {
+      await sbFetch('diary', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify(entry),
+      });
+      rows[id].saved = true;
+      rows[id].error = null;
+      saved++;
+      renderRow(id);
+    } catch(e) {
+      rows[id].error = `Save failed: ${e.message}`;
+      errors++;
+      renderRow(id);
+    }
+
+    updateSummary();
+    // Small delay to avoid rate limits
+    await new Promise(res => setTimeout(res, 80));
+  }
+
+  progressBar.style.width = '100%';
+  progressLabel.textContent = `Done — ${saved} saved, ${errors} failed.`;
+  setTimeout(() => { progressWrap.style.display = 'none'; }, 3000);
+
+  setSaving(false);
+
+  if (errors === 0) {
+    showToast(`${saved} entr${saved === 1 ? 'y' : 'ies'} saved to diary!`, 'success');
+  } else {
+    showToast(`${saved} saved, ${errors} failed — check rows in red.`, 'error');
+  }
+}
+
+function setSaving(on) {
+  document.getElementById('save-btn').disabled  = on;
+  document.getElementById('save-btn-2').disabled = on;
+  if (on) {
+    document.getElementById('save-btn').innerHTML  = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Saving…';
+    document.getElementById('save-btn-2').innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Saving…';
+  } else {
+    document.getElementById('save-btn').innerHTML  = '<i class="ti ti-cloud-upload"></i> Save all to diary';
+    document.getElementById('save-btn-2').innerHTML = '<i class="ti ti-cloud-upload"></i> Save all to diary';
+  }
+}
+
+// ── Utils ──
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+let toastTimer;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
