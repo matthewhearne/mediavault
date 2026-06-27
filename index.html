@@ -739,6 +739,8 @@ async function sbFetch(path, options = {}) {
       'apikey': SB_KEY,
       'Authorization': `Bearer ${authToken}`,
       'Content-Type': 'application/json',
+      'Accept-Profile': 'mediavault',
+      'Content-Profile': 'mediavault',
       'Prefer': options.prefer || '',
       ...options.headers,
     },
