@@ -995,7 +995,7 @@ async function load() {
     const [sbBoxSets, sbItems, sbDiary] = await Promise.all([
       sbFetch('box_sets?select=*&order=name'),
       sbFetch('items?select=*&order=added.desc'),
-      sbFetch('diary?select=*&order=watched_date.desc,added.desc').catch(e => { console.warn('Diary anon fetch error:', e); return null; }),
+      sbFetch('diary?select=*&order=watched_date.desc,added.desc').catch(() => null),
     ]);
 
     boxSets = sbBoxSets.map(r => ({ id: r.id, name: r.name }));
