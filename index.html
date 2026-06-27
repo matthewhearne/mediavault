@@ -992,9 +992,10 @@ async function load() {
   render();
 
   try {
-    const [sbBoxSets, sbItems] = await Promise.all([
+    const [sbBoxSets, sbItems, sbDiary] = await Promise.all([
       sbFetch('box_sets?select=*&order=name'),
       sbFetch('items?select=*&order=added.desc'),
+      sbFetch('diary?select=*&order=watched_date.desc,added.desc').catch(() => null),
     ]);
 
     boxSets = sbBoxSets.map(r => ({ id: r.id, name: r.name }));
@@ -1014,9 +1015,28 @@ async function load() {
       poster: r.poster || '',
     }));
 
+    // Process diary (available to anon via public_read RLS policy)
+    if (sbDiary) {
+      diary = sbDiary.map(r => ({
+        id: r.id,
+        title: r.title,
+        year: r.year,
+        poster: r.poster || '',
+        tmdbId: r.tmdb_id || null,
+        watchedDate: r.watched_date,
+        rating: r.rating != null ? r.rating : null,
+        notes: r.notes || '',
+        source: r.source || '',
+        added: r.added,
+      }));
+      saveDiaryLocal();
+    }
+
     saveLocal();
     setSyncStatus('ok', 'Synced');
     render();
+    renderDiaryStats();
+    renderDiary();
   } catch(e) {
     console.error('Load error:', e);
     setSyncStatus('error', 'Sync failed');
