@@ -505,6 +505,7 @@
         </button>
         <div class="auth-menu" id="auth-menu" style="display:none">
           <div class="auth-menu-name" id="auth-menu-name"></div>
+          <button class="auth-menu-item" onclick="exportBackup()"><i class="ti ti-download"></i> Export backup (CSV)</button>
           <button class="auth-menu-item" onclick="signOut()"><i class="ti ti-logout"></i> Sign out</button>
         </div>
       </div>
@@ -1186,6 +1187,88 @@ async function save(filmToSync, deletedFilmId, bsToSync, deletedBsId) {
 // ── Helpers ──
 function bsName(id) { const b = boxSets.find(x => x.id === id); return b ? b.name : ''; }
 function bsFilms(id) { return films.filter(f => f.boxsetId === id); }
+
+// ── CSV backup export ──
+function csvEscape(val) {
+  if (val === null || val === undefined) return '';
+  const s = String(val);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function toCsv(rows, headers) {
+  const lines = [headers.join(',')];
+  rows.forEach(row => lines.push(headers.map(h => csvEscape(row[h])).join(',')));
+  return lines.join('\r\n');
+}
+
+function downloadCsv(filename, csvContent) {
+  // Leading BOM so Excel opens UTF-8 CSVs (accented names, etc.) correctly
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function exportBackup() {
+  if (!isAdmin()) return;
+  const menu = document.getElementById('auth-menu');
+  if (menu) menu.style.display = 'none';
+
+  const stamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+  const itemHeaders = ['id','title','year','type','format','wanted','watchlist','favourite','boxsetId','boxSetName','genre','cast','poster','lentTo','lentDate','added'];
+  const itemRows = films.map(f => ({
+    id: f.id,
+    title: f.title,
+    year: f.year || '',
+    type: f.type || '',
+    format: f.format || '',
+    wanted: !!f.wanted,
+    watchlist: !!f.watchlist,
+    favourite: !!f.favourite,
+    boxsetId: f.boxsetId || '',
+    boxSetName: f.boxsetId ? bsName(f.boxsetId) : '',
+    genre: f.genre || '',
+    cast: f.cast || '',
+    poster: f.poster || '',
+    lentTo: f.lentTo || '',
+    lentDate: f.lentDate || '',
+    added: f.added || '',
+  }));
+
+  const bsHeaders = ['id', 'name', 'filmCount'];
+  const bsRows = boxSets.map(bs => ({ id: bs.id, name: bs.name, filmCount: bsFilms(bs.id).length }));
+
+  const diaryHeaders = ['id','title','year','watchedDate','rating','source','notes','tmdbId','poster','added'];
+  const diaryRows = diary.map(e => ({
+    id: e.id,
+    title: e.title,
+    year: e.year || '',
+    watchedDate: e.watchedDate || '',
+    rating: e.rating != null ? e.rating : '',
+    source: e.source || '',
+    notes: e.notes || '',
+    tmdbId: e.tmdbId || '',
+    poster: e.poster || '',
+    added: e.added || '',
+  }));
+
+  const files = [
+    { name: `mediavault-items-${stamp}.csv`,   csv: toCsv(itemRows, itemHeaders) },
+    { name: `mediavault-boxsets-${stamp}.csv`, csv: toCsv(bsRows, bsHeaders) },
+    { name: `mediavault-diary-${stamp}.csv`,   csv: toCsv(diaryRows, diaryHeaders) },
+  ];
+  // Stagger the downloads slightly — triggering several at once can make some
+  // browsers block all but the first as a suspected multi-download popup.
+  files.forEach((file, i) => setTimeout(() => downloadCsv(file.name, file.csv), i * 400));
+
+  showToast(`Exporting backup — ${files.length} CSV files (${itemRows.length} items, ${bsRows.length} box sets, ${diaryRows.length} diary entries).`);
+}
 
 // ── Filtering ──
 function isOwned(f) { return !f.wanted && !!f.format; }
