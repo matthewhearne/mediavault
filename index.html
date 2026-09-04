@@ -348,6 +348,7 @@
     .toolbar { flex-wrap: wrap; gap: 8px; }
     .search-wrap { width: 100%; min-width: 0; flex: none; }
     select.ctrl { flex: 1; font-size: 16px; }
+    .random-btn { flex: 1 1 100%; justify-content: center; }
 
     /* Table: all col visibility handled via mobile TABLE_HEAD (no colgroup) */
     .col-format, th.col-format,
@@ -442,7 +443,10 @@
   .source-collection { background: var(--green-dim);  color: var(--green); }
   .source-streaming  { background: var(--blue-dim);   color: var(--blue); }
   .source-cinema     { background: var(--purple-dim); color: var(--purple); }
-  .source-tv         { background: var(--purple-dim); color: var(--purple); }
+  .source-other      { background: rgba(154,153,163,0.14); color: var(--text2); }
+
+  .lent-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 500; color: var(--red); background: var(--red-dim); border: 1px solid rgba(248,113,113,0.25); padding: 1px 7px 1px 5px; border-radius: 4px; white-space: nowrap; letter-spacing: 0.3px; }
+  .lent-badge i { font-size: 11px; }
 
   .diary-entry-actions { opacity: 0; transition: opacity 0.12s; display: flex; align-items: center; gap: 2px; flex-shrink: 0; padding-top: 2px; }
   @media (max-width: 768px) { .diary-entry-actions { opacity: 1; } }
@@ -525,6 +529,7 @@
           <option value="year">Year (newest)</option>
           <option value="added">Recently added</option>
         </select>
+        <button class="sec-btn random-btn" onclick="openRandomPick()" title="Pick something to watch"><i class="ti ti-dice-5"></i> What should I watch?</button>
       </div>
       <div id="filter-chips"></div>
       <div id="pager-wrap-top"></div>
@@ -598,7 +603,7 @@
           <option value="collection">Collection</option>
           <option value="streaming">Streaming</option>
           <option value="cinema">Cinema</option>
-          <option value="tv">TV</option>
+          <option value="other">Other</option>
         </select>
         <button class="diary-log-btn" id="diary-add-btn" onclick="openLogFilm()" style="display:none"><i class="ti ti-plus"></i> Log film</button>
       </div>
@@ -671,7 +676,7 @@
           <option value="collection">From my collection</option>
           <option value="streaming">Streaming</option>
           <option value="cinema">Cinema</option>
-          <option value="tv">TV</option>
+          <option value="other">Other</option>
         </select>
       </div>
 
@@ -686,6 +691,28 @@
       <button class="del-btn" id="log-del-btn" style="display:none" onclick="deleteDiaryEntry()"><i class="ti ti-trash"></i> Delete</button>
       <button class="sec-btn" onclick="closeModal('log-modal')">Cancel</button>
       <button class="pri-btn" id="log-save-btn" onclick="saveDiaryEntry()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Random pick modal ── -->
+<div class="modal-overlay" id="random-modal" onclick="overlayClick(event,'random-modal')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:440px">
+    <div class="modal-head">
+      <div class="modal-title">What should I watch?</div>
+      <button class="modal-close" onclick="closeModal('random-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="diary-source-tabs" id="random-pool-tabs">
+        <button class="diary-source-tab active" data-pool="watchlist" onclick="setRandomPool('watchlist')">Watchlist</button>
+        <button class="diary-source-tab" data-pool="unwatched" onclick="setRandomPool('unwatched')">Unwatched owned</button>
+        <button class="diary-source-tab" data-pool="both" onclick="setRandomPool('both')">Either</button>
+      </div>
+      <div id="random-result" style="min-height:170px;display:flex;align-items:center;justify-content:center"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="sec-btn" onclick="pickRandom()"><i class="ti ti-refresh"></i> Pick again</button>
+      <button class="pri-btn" id="random-log-btn" style="display:none" onclick="logRandomPick()">Log a watch</button>
     </div>
   </div>
 </div>
@@ -749,6 +776,13 @@
           <label class="check-label"><input type="checkbox" id="m-favourite"> Favourite</label>
         </div>
       </div>
+      <div class="fg-row">
+        <div class="fg"><label>Lent to <span style="font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0">(optional)</span></label><input id="m-lent-to" placeholder="e.g. Sarah"></div>
+        <div class="fg"><label>Lent date</label><input id="m-lent-date" type="date"></div>
+      </div>
+      <div id="m-lent-clear-wrap" style="display:none;margin:-6px 0 14px">
+        <button type="button" class="sec-btn" onclick="clearLendingFields()" style="font-size:12px;padding:6px 12px;display:inline-flex;align-items:center;gap:5px"><i class="ti ti-corner-up-left"></i> Mark as returned</button>
+      </div>
       <div class="fg">
         <label>Box set</label>
         <div id="bs-selected-display"></div>
@@ -796,6 +830,8 @@ let perPage = 15;
 let films = [], boxSets = [];
 let activeFilter = 'owned', activeType = 'all', activeFormat = null, activeYear = null, activeGenre = null, activeCast = null, currentPage = 1;
 let editFilmId = null, editBsId = null;
+// "What should I watch?" random picker state
+let randomPool = 'watchlist', randomPick = null;
 // tracks selected boxset id in film modal (null = none, string = id)
 let filmModalBsId = null;
 
@@ -921,9 +957,16 @@ async function handleSession(user, accessToken) {
         source: r.source || '',
         added: r.added,
       }));
+      const migrated = normalizeDiarySources();
       saveDiaryLocal();
       render(); // re-render collection to show diary last-watched column
       if (currentView === 'diary') { renderDiaryStats(); renderDiary(); }
+      if (migrated.length && isAdmin()) {
+        for (const entry of migrated) {
+          try { await saveDiaryEntryRemote(entry); } catch(err) { console.warn('Diary source migration failed for entry', entry.id, err); }
+        }
+        console.log(`MediaVault: migrated ${migrated.length} diary entr${migrated.length===1?'y':'ies'} from "TV" to "Other".`);
+      }
     } catch(e) { console.warn('Diary fetch failed:', e); }
   }
 }
@@ -987,6 +1030,7 @@ async function load() {
     const dRaw = JSON.parse(localStorage.getItem('mediavault_diary_v1') || 'null');
     if (dRaw) diary = dRaw;
   } catch(e) {}
+  normalizeDiarySources();
 
   setSyncStatus('syncing', 'Syncing…');
   render();
@@ -1013,6 +1057,8 @@ async function load() {
       genre: r.genre || '',
       cast: r.cast || '',
       poster: r.poster || '',
+      lentTo: r.lent_to || '',
+      lentDate: r.lent_date || null,
     }));
 
     // Process diary (available to anon via public_read RLS policy)
@@ -1029,6 +1075,7 @@ async function load() {
         source: r.source || '',
         added: r.added,
       }));
+      normalizeDiarySources();
       saveDiaryLocal();
     }
 
@@ -1090,6 +1137,8 @@ async function saveFilmRemote(f) {
       genre: f.genre || null,
       cast: f.cast || null,
       poster: f.poster || null,
+      lent_to: f.lentTo || null,
+      lent_date: f.lentDate || null,
     }),
   });
 }
@@ -1157,6 +1206,7 @@ function getFiltered() {
       if (activeFilter === 'watchlist')  return f.watchlist;
       if (activeFilter === 'favourites') return f.favourite;
       if (activeFilter === 'boxsets')    return isOwned(f) && !!f.boxsetId;
+      if (activeFilter === 'lent')       return isOwned(f) && !!f.lentTo;
       return isOwned(f);
     })
     .sort((a, b) => {
@@ -1196,6 +1246,7 @@ function renderSidebar() {
     watchlist:  films.filter(f=>f.watchlist).length,
     favourites: films.filter(f=>f.favourite).length,
     boxsets:    films.filter(f=>isOwned(f) && !!f.boxsetId).length,
+    lent:       films.filter(f=>isOwned(f) && !!f.lentTo).length,
     all:        films.filter(f=>isOwned(f)).length,
     films:      films.filter(f=>isOwned(f) && f.type==='Film').length,
     tvshows:    films.filter(f=>isOwned(f) && f.type==='TV Show').length,
@@ -1226,6 +1277,7 @@ function renderSidebar() {
     ['watchlist',  'ti-bookmark',     'Watchlist'],
     ['favourites', 'ti-heart',        'Favourites'],
     ['boxsets',    'ti-package',      'Box sets'],
+    ['lent',       'ti-package-export','Lent out'],
   ];
   html += '<div class="sb-section"><div class="sb-title">Status</div>';
   statusFilters.forEach(([key, icon, label]) => {
@@ -1313,6 +1365,9 @@ function filmRowHtml(f) {
   const typeCls = (f.type || 'Film').replace(' ', '-');
   const typeBadge = `<span class="type-badge type-${typeCls}">${f.type || 'Film'}</span>`;
   const bsBadge = f.boxsetId ? `<span class="bs-badge"><i class="ti ti-package"></i>${bsName(f.boxsetId)}</span>` : '';
+  const lentBadge = f.lentTo
+    ? `<span class="lent-badge" title="${f.lentDate ? 'Lent ' + formatUKDate(f.lentDate) : ''}"><i class="ti ti-package-export"></i>Lent to ${f.lentTo}</span>`
+    : '';
   const posterThumb = f.poster
     ? `<img src="${f.poster}" alt="" style="width:28px;height:42px;object-fit:cover;border-radius:3px;flex-shrink:0;margin-right:4px">`
     : '';
@@ -1338,7 +1393,7 @@ function filmRowHtml(f) {
       <div style="display:flex;align-items:center;gap:6px">
         ${posterThumb}
         <div style="min-width:0">
-          <div class="film-title">${f.title}${typeBadge}${bsBadge}${fmtInline}</div>
+          <div class="film-title">${f.title}${typeBadge}${bsBadge}${lentBadge}${fmtInline}</div>
           ${sub}${castLine}
         </div>
       </div>
@@ -1748,6 +1803,9 @@ function openAddFilm() {
   document.getElementById('m-wanted').checked = false;
   document.getElementById('m-watchlist').checked = false;
   document.getElementById('m-favourite').checked = false;
+  document.getElementById('m-lent-to').value = '';
+  document.getElementById('m-lent-date').value = '';
+  document.getElementById('m-lent-clear-wrap').style.display = 'none';
   document.getElementById('new-bs-name') && (document.getElementById('new-bs-name').value = '');
   document.getElementById('bs-search-input').value = '';
   document.getElementById('bs-search-results').innerHTML = '';
@@ -1776,6 +1834,9 @@ function openEditFilm(id) {
   document.getElementById('m-wanted').checked = !!f.wanted;
   document.getElementById('m-watchlist').checked = !!f.watchlist;
   document.getElementById('m-favourite').checked = !!f.favourite;
+  document.getElementById('m-lent-to').value = f.lentTo || '';
+  document.getElementById('m-lent-date').value = f.lentDate || '';
+  document.getElementById('m-lent-clear-wrap').style.display = f.lentTo ? '' : 'none';
   document.getElementById('bs-search-input').value = '';
   document.getElementById('bs-search-results').innerHTML = '';
   document.getElementById('tmdb-results').style.display = 'none';
@@ -1794,10 +1855,17 @@ function openEditFilm(id) {
   document.getElementById('film-modal').classList.add('open');
 }
 
+function clearLendingFields() {
+  document.getElementById('m-lent-to').value = '';
+  document.getElementById('m-lent-date').value = '';
+  document.getElementById('m-lent-clear-wrap').style.display = 'none';
+}
+
 function saveFilm() {
   if (!isAdmin()) return;
   const title = document.getElementById('m-title').value.trim();
   if (!title) { document.getElementById('m-title').focus(); return; }
+  const lentTo = document.getElementById('m-lent-to').value.trim();
   const data = {
     title,
     year:      parseInt(document.getElementById('m-year').value) || null,
@@ -1810,6 +1878,9 @@ function saveFilm() {
     watchlist: document.getElementById('m-watchlist').checked,
     favourite: document.getElementById('m-favourite').checked,
     boxsetId:  filmModalBsId,
+    lentTo:    lentTo || null,
+    // A lent date only makes sense alongside a name — drop it if "Lent to" was cleared.
+    lentDate:  lentTo ? (document.getElementById('m-lent-date').value || null) : null,
   };
   let savedFilm;
   if (editFilmId) {
@@ -1829,6 +1900,83 @@ function deleteFilm() {
   if (!f || !confirm(`Remove "${f.title}" from your collection?`)) return;
   films = films.filter(x => x.id !== editFilmId);
   save(null, editFilmId); closeModal('film-modal'); render();
+}
+
+// ── "What should I watch?" random picker ──
+function getRandomCandidates(pool) {
+  const watchlistItems = films.filter(f => isOwned(f) && f.watchlist);
+  const unwatchedOwned = films.filter(f => isOwned(f) && !getDiaryEntryForFilm(f));
+  if (pool === 'watchlist') return watchlistItems;
+  if (pool === 'unwatched') return unwatchedOwned;
+  // 'both' — union, de-duplicated by id
+  const seen = new Set();
+  return [...watchlistItems, ...unwatchedOwned].filter(f => {
+    if (seen.has(f.id)) return false;
+    seen.add(f.id);
+    return true;
+  });
+}
+
+function renderRandomPoolTabs() {
+  document.querySelectorAll('#random-pool-tabs .diary-source-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.pool === randomPool);
+  });
+}
+
+function openRandomPick() {
+  document.getElementById('random-modal').classList.add('open');
+  renderRandomPoolTabs();
+  pickRandom();
+}
+
+function setRandomPool(pool) {
+  randomPool = pool;
+  renderRandomPoolTabs();
+  pickRandom();
+}
+
+function pickRandom() {
+  const candidates = getRandomCandidates(randomPool);
+  const resultEl = document.getElementById('random-result');
+  const logBtn = document.getElementById('random-log-btn');
+  if (!candidates.length) {
+    randomPick = null;
+    resultEl.innerHTML = `<div class="empty" style="padding:10px 20px"><i class="ti ti-mood-empty"></i><p>Nothing in this list yet.</p></div>`;
+    logBtn.style.display = 'none';
+    return;
+  }
+  randomPick = candidates[Math.floor(Math.random() * candidates.length)];
+  renderRandomResult();
+}
+
+function renderRandomResult() {
+  const f = randomPick;
+  if (!f) return;
+  const posterEl = f.poster
+    ? `<img src="${f.poster}" alt="" style="width:110px;height:165px;object-fit:cover;border-radius:8px;flex-shrink:0">`
+    : `<div style="width:110px;height:165px;border-radius:8px;flex-shrink:0;background:var(--surface3);display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:32px"><i class="ti ti-movie"></i></div>`;
+  const subParts = [f.year, f.genre].filter(Boolean);
+  document.getElementById('random-result').innerHTML = `<div style="display:flex;gap:16px;align-items:flex-start;width:100%">
+    ${posterEl}
+    <div style="min-width:0">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:var(--text)">${f.title}</div>
+      ${subParts.length ? `<div style="font-size:13px;color:var(--text2);margin-top:4px">${subParts.join(' · ')}</div>` : ''}
+      ${f.cast ? `<div style="font-size:12px;color:var(--text3);margin-top:6px">${f.cast}</div>` : ''}
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+        ${f.format ? `<span class="fmt fmt-${f.format}">${f.format}</span>` : ''}
+        ${f.watchlist ? `<span class="type-badge" style="background:var(--blue-dim);color:var(--blue)">Watchlist</span>` : ''}
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('random-log-btn').style.display = isAdmin() ? 'inline-flex' : 'none';
+}
+
+function logRandomPick() {
+  if (!randomPick || !isAdmin()) return;
+  const filmId = randomPick.id;
+  closeModal('random-modal');
+  openLogFilm();
+  selectFromCollection(filmId);
 }
 
 // ── Box set management modal ──
@@ -2245,6 +2393,15 @@ function saveDiaryLocal() {
   try { localStorage.setItem('mediavault_diary_v1', JSON.stringify(diary)); } catch(e) {}
 }
 
+// ── One-time migration: the diary's "TV" source option was renamed to "Other".
+// Rewrites any legacy entries in place; returns the list of entries that changed
+// so the caller can push them to Supabase (only possible once signed in as admin).
+function normalizeDiarySources() {
+  const changed = [];
+  diary.forEach(e => { if (e.source === 'tv') { e.source = 'other'; changed.push(e); } });
+  return changed;
+}
+
 async function saveDiaryEntryRemote(e) {
   await sbFetch('diary', {
     method: 'POST',
@@ -2294,9 +2451,10 @@ function sourceBadgeHtml(source) {
     collection: ['Collection', 'source-collection'],
     streaming:  ['Streaming',  'source-streaming'],
     cinema:     ['Cinema',     'source-cinema'],
-    tv:         ['TV',         'source-tv'],
+    other:      ['Other',      'source-other'],
+    tv:         ['Other',      'source-other'], // legacy value, shown as Other until migrated
   };
-  const [label, cls] = map[source] || ['TV', 'source-tv'];
+  const [label, cls] = map[source] || ['Other', 'source-other'];
   return `<span class="source-badge ${cls}">${label}</span>`;
 }
 
@@ -2309,7 +2467,7 @@ function renderDiary() {
   let entries = diary.filter(e => {
     if (q && !e.title.toLowerCase().includes(q)) return false;
     if (yrF && (!e.watchedDate || !e.watchedDate.startsWith(yrF))) return false;
-    if (srcF && e.source !== srcF) return false;
+    if (srcF && !(e.source === srcF || (srcF === 'other' && e.source === 'tv'))) return false;
     return true;
   });
 
@@ -2679,18 +2837,23 @@ function renderDiaryStats() {
   const collection = diary.filter(e => e.source === 'collection').length;
   const streaming  = diary.filter(e => e.source === 'streaming').length;
   const cinema     = diary.filter(e => e.source === 'cinema').length;
-  const tv         = diary.filter(e => e.source === 'tv').length;
+  const other      = diary.filter(e => e.source === 'other' || e.source === 'tv').length;
   document.getElementById('stats-bar').innerHTML = `
     <div class="stat"><div class="stat-n">${total}</div><div class="stat-l">Logged</div></div>
     <div class="stat"><div class="stat-n">${collection}</div><div class="stat-l">Collection</div></div>
     <div class="stat"><div class="stat-n">${streaming}</div><div class="stat-l">Streaming</div></div>
     <div class="stat"><div class="stat-n">${cinema}</div><div class="stat-l">Cinema</div></div>
-    <div class="stat"><div class="stat-n">${tv}</div><div class="stat-l">TV</div></div>`;
+    <div class="stat"><div class="stat-n">${other}</div><div class="stat-l">Other</div></div>`;
 }
 
 // ── Sort key: strip leading English stop words for alphabetical ordering ──
 const STOP_WORDS = /^(a |an |the )/i;
 function sortTitle(title) { return (title || '').replace(STOP_WORDS, '').trim(); }
+function formatUKDate(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 function overlayClick(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
 
