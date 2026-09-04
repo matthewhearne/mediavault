@@ -703,11 +703,16 @@
       <button class="modal-close" onclick="closeModal('random-modal')"><i class="ti ti-x"></i></button>
     </div>
     <div class="modal-body">
-      <div class="diary-source-tabs" id="random-pool-tabs">
-        <button class="diary-source-tab active" data-pool="watchlist" onclick="setRandomPool('watchlist')">Watchlist</button>
-        <button class="diary-source-tab" data-pool="unwatched" onclick="setRandomPool('unwatched')">Unwatched owned</button>
-        <button class="diary-source-tab" data-pool="both" onclick="setRandomPool('both')">Either</button>
+      <div class="fg" style="margin-bottom:10px">
+        <label>Genre <span style="font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0">(optional)</span></label>
+        <select id="random-genre-sel" onchange="onRandomGenreChange()">
+          <option value="">All genres</option>
+        </select>
       </div>
+      <label class="check-label" style="margin-bottom:14px">
+        <input type="checkbox" id="random-exclude-watched" onchange="onRandomExcludeWatchedChange()">
+        Exclude already watched
+      </label>
       <div id="random-result" style="min-height:170px;display:flex;align-items:center;justify-content:center"></div>
     </div>
     <div class="modal-foot">
@@ -831,7 +836,7 @@ let films = [], boxSets = [];
 let activeFilter = 'owned', activeType = 'all', activeFormat = null, activeYear = null, activeGenre = null, activeCast = null, currentPage = 1;
 let editFilmId = null, editBsId = null;
 // "What should I watch?" random picker state
-let randomPool = 'watchlist', randomPick = null;
+let randomGenre = '', randomExcludeWatched = false, randomPick = null;
 // tracks selected boxset id in film modal (null = none, string = id)
 let filmModalBsId = null;
 
@@ -1903,45 +1908,65 @@ function deleteFilm() {
 }
 
 // ── "What should I watch?" random picker ──
-function getRandomCandidates(pool) {
-  const watchlistItems = films.filter(f => isOwned(f) && f.watchlist);
-  const unwatchedOwned = films.filter(f => isOwned(f) && !getDiaryEntryForFilm(f));
-  if (pool === 'watchlist') return watchlistItems;
-  if (pool === 'unwatched') return unwatchedOwned;
-  // 'both' — union, de-duplicated by id
-  const seen = new Set();
-  return [...watchlistItems, ...unwatchedOwned].filter(f => {
-    if (seen.has(f.id)) return false;
-    seen.add(f.id);
-    return true;
+// Pool is always the owned collection, minus anything currently lent out.
+function isPickable(f) { return isOwned(f) && !f.lentTo; }
+
+function randomEligible(f) {
+  if (!isPickable(f)) return false;
+  if (randomExcludeWatched && getDiaryEntryForFilm(f)) return false;
+  return true;
+}
+
+function getRandomCandidates(genre) {
+  return films.filter(f => {
+    if (!randomEligible(f)) return false;
+    if (!genre) return true;
+    return (f.genre || '').split(',').map(g => g.trim().toLowerCase()).includes(genre.toLowerCase());
   });
 }
 
-function renderRandomPoolTabs() {
-  document.querySelectorAll('#random-pool-tabs .diary-source-tab').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.pool === randomPool);
+function populateRandomGenreDropdown() {
+  const sel = document.getElementById('random-genre-sel');
+  const genreMap = {};
+  films.filter(randomEligible).forEach(f => {
+    if (!f.genre) return;
+    f.genre.split(',').forEach(g => {
+      const name = g.trim();
+      if (name) genreMap[name] = (genreMap[name] || 0) + 1;
+    });
   });
+  const genres = Object.keys(genreMap).sort((a, b) => a.localeCompare(b));
+  sel.innerHTML = '<option value="">All genres</option>' +
+    genres.map(g => `<option value="${g}"${g === randomGenre ? ' selected' : ''}>${g} (${genreMap[g]})</option>`).join('');
+  // If the previously selected genre no longer has any eligible titles, fall back to "All genres"
+  if (randomGenre && !genres.includes(randomGenre)) { randomGenre = ''; sel.value = ''; }
+}
+
+function onRandomGenreChange() {
+  randomGenre = document.getElementById('random-genre-sel').value;
+  pickRandom();
+}
+
+function onRandomExcludeWatchedChange() {
+  randomExcludeWatched = document.getElementById('random-exclude-watched').checked;
+  populateRandomGenreDropdown();
+  pickRandom();
 }
 
 function openRandomPick() {
   document.getElementById('random-modal').classList.add('open');
-  renderRandomPoolTabs();
-  pickRandom();
-}
-
-function setRandomPool(pool) {
-  randomPool = pool;
-  renderRandomPoolTabs();
+  document.getElementById('random-exclude-watched').checked = randomExcludeWatched;
+  populateRandomGenreDropdown();
   pickRandom();
 }
 
 function pickRandom() {
-  const candidates = getRandomCandidates(randomPool);
+  const candidates = getRandomCandidates(randomGenre);
   const resultEl = document.getElementById('random-result');
   const logBtn = document.getElementById('random-log-btn');
   if (!candidates.length) {
     randomPick = null;
-    resultEl.innerHTML = `<div class="empty" style="padding:10px 20px"><i class="ti ti-mood-empty"></i><p>Nothing in this list yet.</p></div>`;
+    resultEl.innerHTML = `<div class="empty" style="padding:10px 20px"><i class="ti ti-mood-empty"></i><p>Nothing matches those filters — try loosening them.</p></div>`;
     logBtn.style.display = 'none';
     return;
   }
@@ -1964,7 +1989,6 @@ function renderRandomResult() {
       ${f.cast ? `<div style="font-size:12px;color:var(--text3);margin-top:6px">${f.cast}</div>` : ''}
       <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
         ${f.format ? `<span class="fmt fmt-${f.format}">${f.format}</span>` : ''}
-        ${f.watchlist ? `<span class="type-badge" style="background:var(--blue-dim);color:var(--blue)">Watchlist</span>` : ''}
       </div>
     </div>
   </div>`;
