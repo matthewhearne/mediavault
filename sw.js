@@ -1,4 +1,4 @@
-const CACHE = 'mediavault-v2';
+const CACHE = 'mediavault-v3';
 const PRECACHE = [
   './',
   './index.html',
@@ -26,8 +26,10 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Fetch: cache-first for the app shell and static assets;
-// network-only for Supabase API, auth, and TMDB (live data).
+// Fetch: network-first for page navigations (so a normal refresh always shows
+// whatever is actually deployed); cache-first for static assets (fonts, icon
+// CSS, JS libraries) since those rarely change; network-only for Supabase
+// API, auth, and TMDB (live data).
 self.addEventListener('fetch', e => {
   const url = e.request.url;
 
@@ -39,22 +41,33 @@ self.addEventListener('fetch', e => {
     return;
   }
 
+  // Page navigations: try the network first so deployed changes show up on
+  // the very next normal refresh — no hard-refresh needed. Only fall back to
+  // the last cached copy of the shell when offline.
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request)
+        .then(response => {
+          const clone = response.clone();
+          caches.open(CACHE).then(cache => cache.put(e.request, clone));
+          return response;
+        })
+        .catch(() => caches.match(e.request).then(cached => cached || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // Everything else: cache-first, falling back to network and caching what we get.
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
       return fetch(e.request).then(response => {
-        // Cache successful GET responses for static assets as we encounter them
         if (e.request.method === 'GET' && response.ok) {
           const clone = response.clone();
           caches.open(CACHE).then(cache => cache.put(e.request, clone));
         }
         return response;
-      }).catch(() => {
-        // Offline and not cached — for page navigations serve the cached index
-        if (e.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-      });
+      }).catch(() => {});
     })
   );
 });
