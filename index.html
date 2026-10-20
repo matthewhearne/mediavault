@@ -2134,9 +2134,16 @@ async function handleScannedCode(code) {
   if (ownedMatch) { renderScanOwnedResult(ownedMatch); return; }
 
   // 2. Not seen before — look it up to get a title, then check that title against the collection.
+  // UPCitemdb's trial endpoint doesn't allow direct cross-origin browser requests (no CORS
+  // headers), so the call is routed through a free public CORS proxy (allorigins.win) as a
+  // stopgap. This is best-effort — it can be slower or occasionally flaky since it's a free,
+  // shared, rate-limited service not meant for production use. The proper fix (a small
+  // Supabase Edge Function doing the lookup server-side) is on the roadmap.
   try {
-    const res = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(code)}`);
-    const data = await res.json();
+    const target = `https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(code)}`;
+    const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`);
+    const text = await res.text();
+    const data = JSON.parse(text);
     const item = data && data.items && data.items[0];
     if (item && item.title) {
       const cleanTitle = cleanProductTitle(item.title);

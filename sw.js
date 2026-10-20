@@ -1,4 +1,4 @@
-const CACHE = 'mediavault-v5';
+const CACHE = 'mediavault-v6';
 const PRECACHE = [
   './',
   './index.html',
@@ -44,6 +44,7 @@ self.addEventListener('fetch', e => {
       url.includes('supabase.co/auth') ||
       url.includes('themoviedb.org') ||
       url.includes('upcitemdb.com') ||
+      url.includes('allorigins.win') ||
       url.includes('fonts.gstatic.com')) {
     return;
   }
