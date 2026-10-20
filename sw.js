@@ -1,7 +1,12 @@
-const CACHE = 'mediavault-v3';
+const CACHE = 'mediavault-v4';
 const PRECACHE = [
   './',
   './index.html',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/apple-touch-icon.png',
+  './icons/favicon-32.png',
   'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap',
   'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css',
   'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js',
