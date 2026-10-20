@@ -382,6 +382,7 @@
       transition: transform 0.12s;
     }
     .fab:active { transform: scale(0.91); }
+    .fab-scan { bottom: 86px; width: 46px; height: 46px; font-size: 20px; background: var(--blue); color: #0a0a0b; }
 
     /* Dashboard single column */
     .dash-grid { grid-template-columns: 1fr; }
@@ -505,6 +506,7 @@
     </div>
     <div class="header-right">
       <div id="sync-status" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3)"></div>
+      <button class="add-btn sec-btn" id="header-scan-btn" onclick="openScanModal()" style="display:none;white-space:nowrap"><i class="ti ti-barcode"></i> Scan</button>
       <button class="add-btn" id="header-add-btn" onclick="openAddFilm()" style="display:none"><i class="ti ti-plus"></i> Add item</button>
       <div class="auth-wrap" id="auth-wrap">
         <button class="auth-btn" id="auth-btn" onclick="handleAuthClick()">
@@ -730,8 +732,33 @@
   </div>
 </div>
 
+<!-- ── Scan barcode modal ── -->
+<div class="modal-overlay" id="scan-modal" onclick="overlayClick(event,'scan-modal')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:420px">
+    <div class="modal-head">
+      <div class="modal-title">Scan barcode</div>
+      <button class="modal-close" onclick="closeModal('scan-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="scan-reader" style="width:100%;border-radius:var(--radius);overflow:hidden;background:#000"></div>
+      <div id="scan-result" style="margin-top:14px;min-height:40px"></div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:6px">Or type the number</label>
+        <div style="display:flex;gap:8px">
+          <input id="scan-manual-input" placeholder="e.g. 7321900123456" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 12px;border-radius:var(--radius);outline:none" onkeydown="if(event.key==='Enter'){event.preventDefault();manualScanLookup()}">
+          <button class="sec-btn" onclick="manualScanLookup()">Look up</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="sec-btn" onclick="closeModal('scan-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- These must be outside .app to avoid being clipped by overflow:hidden -->
 <div class="drawer-overlay" id="drawer-overlay" onclick="toggleDrawer()"></div>
+<button class="fab fab-scan" id="scan-fab-btn" onclick="openScanModal()" aria-label="Scan barcode" style="display:none"><i class="ti ti-barcode"></i></button>
 <button class="fab" id="fab-btn" onclick="openAddFilm()" aria-label="Add item" style="display:none"><i class="ti ti-plus"></i></button>
 
 <!-- ── Film modal ── -->
@@ -780,6 +807,10 @@
           <option>4K</option>
           <option>3D</option>
         </select>
+      </div>
+      <div class="fg">
+        <label>Barcode <span style="font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0">(optional — auto-filled by Scan barcode)</span></label>
+        <input id="m-barcode" placeholder="e.g. 7321900123456">
       </div>
       <div class="fg">
         <label>Flags</label>
@@ -837,6 +868,7 @@
 </div>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 const GOOGLE_CLIENT_ID = '625476206146-fjk8ot2sk4tg7pml0rpk2hv04rhtc2ml.apps.googleusercontent.com';
 let perPage = 15;
@@ -845,6 +877,8 @@ let activeFilter = 'owned', activeType = 'all', activeFormat = null, activeYear 
 let editFilmId = null, editBsId = null;
 // "What should I watch?" random picker state
 let randomGenre = '', randomExcludeWatched = false, randomPick = null;
+// Barcode scanning state
+let barcodeScanner = null, scanModalBusy = false, pendingScanBarcode = null;
 // tracks selected boxset id in film modal (null = none, string = id)
 let filmModalBsId = null;
 
@@ -872,6 +906,8 @@ function updateAuthUI(user, accessToken) {
   const btn = document.getElementById('auth-btn');
   const headerAddBtn = document.getElementById('header-add-btn');
   const fab = document.getElementById('fab-btn');
+  const headerScanBtn = document.getElementById('header-scan-btn');
+  const scanFab = document.getElementById('scan-fab-btn');
   const isMobile = window.innerWidth <= 768;
 
   if (currentUser) {
@@ -882,13 +918,19 @@ function updateAuthUI(user, accessToken) {
       : `<i class="ti ti-user-circle"></i> <span>${name.split(' ')[0]}</span>`;
     document.getElementById('auth-menu-name').textContent = name;
     headerAddBtn.style.display = (isMobile || currentView === 'diary') ? 'none' : 'flex';
-    if (isMobile) { fab.style.display = currentView === 'diary' ? 'none' : ''; }
+    if (headerScanBtn) headerScanBtn.style.display = (isMobile || currentView === 'diary') ? 'none' : 'flex';
+    if (isMobile) {
+      fab.style.display = currentView === 'diary' ? 'none' : '';
+      if (scanFab) scanFab.style.display = currentView === 'diary' ? 'none' : '';
+    }
     const diaryAddBtn = document.getElementById('diary-add-btn');
     if (diaryAddBtn) diaryAddBtn.style.display = currentView === 'diary' ? '' : 'none';
   } else {
     btn.innerHTML = '<i class="ti ti-brand-google"></i><span>Sign in</span>';
     headerAddBtn.style.display = 'none';
     fab.style.display = 'none';
+    if (headerScanBtn) headerScanBtn.style.display = 'none';
+    if (scanFab) scanFab.style.display = 'none';
     const diaryAddBtn = document.getElementById('diary-add-btn');
     if (diaryAddBtn) diaryAddBtn.style.display = 'none';
   }
@@ -1072,6 +1114,7 @@ async function load() {
       poster: r.poster || '',
       lentTo: r.lent_to || '',
       lentDate: r.lent_date || null,
+      barcode: r.barcode || '',
     }));
 
     // Process diary (available to anon via public_read RLS policy)
@@ -1152,6 +1195,7 @@ async function saveFilmRemote(f) {
       poster: f.poster || null,
       lent_to: f.lentTo || null,
       lent_date: f.lentDate || null,
+      barcode: f.barcode || null,
     }),
   });
 }
@@ -1901,6 +1945,8 @@ function openAddFilm() {
   document.getElementById('m-lent-to').value = '';
   document.getElementById('m-lent-date').value = '';
   document.getElementById('m-lent-clear-wrap').style.display = 'none';
+  document.getElementById('m-barcode').value = pendingScanBarcode || '';
+  pendingScanBarcode = null;
   document.getElementById('new-bs-name') && (document.getElementById('new-bs-name').value = '');
   document.getElementById('bs-search-input').value = '';
   document.getElementById('bs-search-results').innerHTML = '';
@@ -1932,6 +1978,7 @@ function openEditFilm(id) {
   document.getElementById('m-lent-to').value = f.lentTo || '';
   document.getElementById('m-lent-date').value = f.lentDate || '';
   document.getElementById('m-lent-clear-wrap').style.display = f.lentTo ? '' : 'none';
+  document.getElementById('m-barcode').value = f.barcode || '';
   document.getElementById('bs-search-input').value = '';
   document.getElementById('bs-search-results').innerHTML = '';
   document.getElementById('tmdb-results').style.display = 'none';
@@ -1956,10 +2003,28 @@ function clearLendingFields() {
   document.getElementById('m-lent-clear-wrap').style.display = 'none';
 }
 
+// Find an existing film with a matching title (ignoring leading "a/an/the" and
+// case), optionally excluding a given id (so editing a film doesn't flag itself).
+function findDuplicateByTitle(title, excludeId) {
+  const key = sortTitle(title).toLowerCase();
+  if (!key) return null;
+  return films.find(f => f.id !== excludeId && sortTitle(f.title).toLowerCase() === key) || null;
+}
+
 function saveFilm() {
   if (!isAdmin()) return;
   const title = document.getElementById('m-title').value.trim();
   if (!title) { document.getElementById('m-title').focus(); return; }
+
+  // Warn (don't block) if this looks like a title already in the collection.
+  if (!editFilmId) {
+    const dupe = findDuplicateByTitle(title, editFilmId);
+    if (dupe) {
+      const already = isOwned(dupe) ? 'already in your collection' : 'already on your list';
+      if (!confirm(`"${dupe.title}"${dupe.year ? ' (' + dupe.year + ')' : ''} is ${already}. Add this as another entry anyway?`)) return;
+    }
+  }
+
   const lentTo = document.getElementById('m-lent-to').value.trim();
   const data = {
     title,
@@ -1976,6 +2041,7 @@ function saveFilm() {
     lentTo:    lentTo || null,
     // A lent date only makes sense alongside a name — drop it if "Lent to" was cleared.
     lentDate:  lentTo ? (document.getElementById('m-lent-date').value || null) : null,
+    barcode:   document.getElementById('m-barcode').value.trim() || null,
   };
   let savedFilm;
   if (editFilmId) {
@@ -1995,6 +2061,186 @@ function deleteFilm() {
   if (!f || !confirm(`Remove "${f.title}" from your collection?`)) return;
   films = films.filter(x => x.id !== editFilmId);
   save(null, editFilmId); closeModal('film-modal'); render();
+}
+
+// ── Barcode scanning ──
+// Camera lifecycle + lookup pipeline for "Scan barcode". Checks the scanned
+// code against items already tagged with a barcode first (instant, no
+// network), then falls back to a free UPC lookup to suggest a title and
+// cross-check it against the collection by name.
+let scanPaused = false;
+
+function openScanModal() {
+  if (!isAdmin()) return;
+  document.getElementById('scan-result').innerHTML = '';
+  document.getElementById('scan-manual-input').value = '';
+  document.getElementById('scan-modal').classList.add('open');
+  startBarcodeScanner();
+}
+
+function startBarcodeScanner() {
+  if (typeof Html5Qrcode === 'undefined') {
+    document.getElementById('scan-result').innerHTML =
+      `<div style="color:var(--text2);font-size:13px">Camera scanning isn't available right now — type the number below instead.</div>`;
+    return;
+  }
+  if (barcodeScanner) return; // already running
+  scanPaused = false;
+  barcodeScanner = new Html5Qrcode('scan-reader', { verbose: false });
+  const config = {
+    fps: 10,
+    qrbox: (w, h) => ({ width: Math.floor(Math.min(w, h) * 0.75), height: Math.floor(Math.min(w, h) * 0.4) }),
+    formatsToSupport: [
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.UPC_E,
+    ],
+  };
+  barcodeScanner.start({ facingMode: 'environment' }, config, onBarcodeDecoded, () => {})
+    .catch(err => {
+      document.getElementById('scan-result').innerHTML =
+        `<div style="color:var(--text2);font-size:13px">Couldn't access the camera (${(err && err.message) || 'permission denied'}). You can still type the number below.</div>`;
+      barcodeScanner = null;
+    });
+}
+
+function stopBarcodeScanner() {
+  if (!barcodeScanner) return;
+  const s = barcodeScanner;
+  barcodeScanner = null;
+  s.stop().catch(() => {}).finally(() => { try { s.clear(); } catch(e) {} });
+}
+
+function onBarcodeDecoded(code) {
+  if (scanPaused) return;
+  scanPaused = true;
+  handleScannedCode(code);
+}
+
+function resumeScanner() {
+  scanPaused = false;
+  document.getElementById('scan-result').innerHTML = '';
+}
+
+async function handleScannedCode(code) {
+  code = (code || '').trim();
+  if (!code) return;
+  const resultEl = document.getElementById('scan-result');
+  resultEl.innerHTML = `<div style="color:var(--text2);font-size:13px">Looking up ${code}…</div>`;
+
+  // 1. Already have this exact barcode tagged on something we own? Instant answer, no network.
+  const ownedMatch = films.find(f => f.barcode === code);
+  if (ownedMatch) { renderScanOwnedResult(ownedMatch); return; }
+
+  // 2. Not seen before — look it up to get a title, then check that title against the collection.
+  try {
+    const res = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(code)}`);
+    const data = await res.json();
+    const item = data && data.items && data.items[0];
+    if (item && item.title) {
+      const cleanTitle = cleanProductTitle(item.title);
+      const dupe = findDuplicateByTitle(cleanTitle, null);
+      if (dupe) renderScanPossibleMatchResult(dupe, cleanTitle, code);
+      else renderScanNewResult(cleanTitle, code);
+    } else {
+      renderScanUnknownResult(code, false);
+    }
+  } catch (e) {
+    renderScanUnknownResult(code, true);
+  }
+}
+
+// Strip common retail-listing noise ("[Blu-ray]", "(DVD) [2019]", "Steelbook", region
+// tags) from a UPC-database title so it's closer to a clean film title for matching.
+function cleanProductTitle(raw) {
+  return (raw || '')
+    .replace(/[\[(](blu-ray|blu ray|dvd|4k uhd|4k|uhd)[\])]/gi, '')
+    .replace(/\b(blu-ray|blu ray|dvd|4k uhd|4k|uhd|steelbook|region [a-z0-9]+)\b/gi, '')
+    .replace(/\s*[-–—:]\s*$/, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function renderScanOwnedResult(f) {
+  document.getElementById('scan-result').innerHTML = `
+    <div style="display:flex;gap:10px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px">
+      ${f.poster ? `<img src="${f.poster}" style="width:36px;height:54px;object-fit:cover;border-radius:4px;flex-shrink:0">` : ''}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:14px">✅ You already have this</div>
+        <div style="font-size:13px;color:var(--text2)">${f.title}${f.year ? ' (' + f.year + ')' : ''}${f.lentTo ? ' · lent to ' + f.lentTo : ''}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="sec-btn" style="flex:1" onclick="resumeScanner()">Scan another</button>
+      <button class="sec-btn" style="flex:1" onclick="closeModal('scan-modal');openEditFilm(${f.id})">View / edit</button>
+    </div>`;
+}
+
+function renderScanPossibleMatchResult(dupe, cleanTitle, code) {
+  const safeTitle = cleanTitle.replace(/'/g, "\\'");
+  document.getElementById('scan-result').innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px">
+      <div style="font-weight:600;font-size:14px">🤔 Possible match</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:2px">Scanned: ${cleanTitle}</div>
+      <div style="font-size:13px;color:var(--text2)">You have: ${dupe.title}${dupe.year ? ' (' + dupe.year + ')' : ''}</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      <button class="sec-btn" style="flex:1" onclick="tagBarcodeToExisting(${dupe.id},'${code}')">Yes, same item</button>
+      <button class="sec-btn" style="flex:1" onclick="openAddFromScan('${safeTitle}','${code}')">No, add new</button>
+    </div>
+    <button class="sec-btn" style="width:100%;margin-top:8px" onclick="resumeScanner()">Scan another</button>`;
+}
+
+function renderScanNewResult(cleanTitle, code) {
+  const safeTitle = cleanTitle.replace(/'/g, "\\'");
+  document.getElementById('scan-result').innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px">
+      <div style="font-weight:600;font-size:14px">🆕 Not in your collection</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:2px">${cleanTitle}</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="pri-btn" style="flex:1" onclick="openAddFromScan('${safeTitle}','${code}')">Add to collection</button>
+      <button class="sec-btn" style="flex:1" onclick="resumeScanner()">Scan another</button>
+    </div>`;
+}
+
+function renderScanUnknownResult(code, failed) {
+  document.getElementById('scan-result').innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px">
+      <div style="font-weight:600;font-size:14px">❓ Couldn't identify ${code}</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:2px">${failed ? 'Lookup failed — ' : ''}You can add it manually with this barcode attached, or try another.</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="pri-btn" style="flex:1" onclick="openAddFromScan('','${code}')">Add manually</button>
+      <button class="sec-btn" style="flex:1" onclick="resumeScanner()">Scan another</button>
+    </div>`;
+}
+
+// Confirm a scanned barcode belongs to an existing item — tag it so future scans are instant.
+function tagBarcodeToExisting(filmId, code) {
+  const f = films.find(x => x.id === filmId);
+  if (!f) return;
+  f.barcode = code;
+  save(f); render();
+  closeModal('scan-modal');
+  openEditFilm(filmId);
+}
+
+// Jump from the scan modal straight into "Add item", pre-filled with the looked-up
+// title (if any) and the scanned barcode.
+function openAddFromScan(title, code) {
+  pendingScanBarcode = code;
+  closeModal('scan-modal');
+  openAddFilm();
+  if (title) document.getElementById('m-title').value = title;
+}
+
+function manualScanLookup() {
+  const code = document.getElementById('scan-manual-input').value.trim();
+  if (!code) return;
+  scanPaused = true;
+  handleScannedCode(code);
 }
 
 // ── "What should I watch?" random picker ──
@@ -2203,12 +2449,16 @@ function switchView(view) {
   document.getElementById('hamburger-btn').style.pointerEvents= view === 'collection' ? '' : 'none';
 
   // FAB / add buttons
-  const fab = document.querySelector('.fab');
+  const fab = document.getElementById('fab-btn');
+  const scanFab = document.getElementById('scan-fab-btn');
   const headerAddBtn = document.getElementById('header-add-btn');
+  const headerScanBtn = document.getElementById('header-scan-btn');
   const diaryAddBtn = document.getElementById('diary-add-btn');
   const isMobile = window.innerWidth <= 768;
   if (fab) fab.style.display = (view === 'collection' && isAdmin() && isMobile) ? '' : 'none';
+  if (scanFab) scanFab.style.display = (view === 'collection' && isAdmin() && isMobile) ? '' : 'none';
   if (headerAddBtn) headerAddBtn.style.display = (view === 'collection' && isAdmin() && !isMobile) ? 'flex' : 'none';
+  if (headerScanBtn) headerScanBtn.style.display = (view === 'collection' && isAdmin() && !isMobile) ? 'flex' : 'none';
   if (diaryAddBtn) diaryAddBtn.style.display   = (isDiary && isAdmin()) ? '' : 'none';
 
   closeDrawer();
@@ -2968,7 +3218,10 @@ function formatUKDate(iso) {
   const [y, m, d] = iso.split('-');
   return `${d}/${m}/${y}`;
 }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function closeModal(id) {
+  if (id === 'scan-modal') stopBarcodeScanner();
+  document.getElementById(id).classList.remove('open');
+}
 function overlayClick(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
 
 // ── Init ──

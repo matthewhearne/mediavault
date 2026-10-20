@@ -1,4 +1,4 @@
-const CACHE = 'mediavault-v4';
+const CACHE = 'mediavault-v5';
 const PRECACHE = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const PRECACHE = [
   'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css',
   'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
+  'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
 ];
 
 // Install: pre-cache all known assets
@@ -42,6 +43,7 @@ self.addEventListener('fetch', e => {
   if (url.includes('supabase.co/rest') ||
       url.includes('supabase.co/auth') ||
       url.includes('themoviedb.org') ||
+      url.includes('upcitemdb.com') ||
       url.includes('fonts.gstatic.com')) {
     return;
   }
