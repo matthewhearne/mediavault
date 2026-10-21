@@ -2153,6 +2153,7 @@ async function handleScannedCode(code) {
     if (!res.ok) throw new Error((data && data.error) || `Lookup function returned ${res.status}`);
     const item = data && data.items && data.items[0];
     if (item && item.title) {
+      console.log('MediaVault scan: raw UPC title —', JSON.stringify(item.title));
       const cleanTitle = cleanProductTitle(item.title);
       const dupe = findDuplicateByTitle(cleanTitle, null);
       if (dupe) renderScanPossibleMatchResult(dupe, cleanTitle, code);
@@ -2168,15 +2169,31 @@ async function handleScannedCode(code) {
   }
 }
 
-// Strip common retail-listing noise ("[Blu-ray]", "(DVD) [2019]", "Steelbook", region
-// tags) from a UPC-database title so it's closer to a clean film title for matching.
+// Strip common retail-listing noise from a UPC-database title so it's closer to a clean
+// film title for matching/pre-filling: leading junk characters some listings prefix
+// ("--Title"), bracketed/parenthetical metadata ("[Blu-ray]", "(UK Import)",
+// "(Widescreen)"), and leftover standalone format/edition words.
+//
+// NOTE: this deliberately does NOT try to strip a trailing cast list (e.g. "Green
+// Zone ... Matt Damon, Greg Kinnear, Brendan Gleeson"). A regex for that turned out
+// to be unsafe — titles whose own last two words happen to look like a name
+// ("A Beautiful Mind", "Good Will Hunting", "The Dark Knight Rises") got wrongly
+// truncated down to "A", "Good", "The Dark", etc. Left for a future pass once we
+// know the exact raw format UPCitemdb returns (see console.log below).
 function cleanProductTitle(raw) {
-  return (raw || '')
-    .replace(/[\[(](blu-ray|blu ray|dvd|4k uhd|4k|uhd)[\])]/gi, '')
-    .replace(/\b(blu-ray|blu ray|dvd|4k uhd|4k|uhd|steelbook|region [a-z0-9]+)\b/gi, '')
-    .replace(/\s*[-–—:]\s*$/, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
+  let t = (raw || '').trim();
+
+  // Leading junk some listings prefix with ("--Species", "*Species").
+  t = t.replace(/^[-–—*•\s]+/, '');
+
+  // Bracketed/parenthetical metadata is almost always format/region/edition info,
+  // not part of the real title — drop it entirely.
+  t = t.replace(/\[[^\]]*\]/g, '').replace(/\([^)]*\)/g, '');
+
+  // Standalone format/edition words left dangling after the stripping above.
+  t = t.replace(/\b(blu-ray|blu ray|dvd|4k uhd|4k|uhd|steelbook|widescreen|full screen|region [a-z0-9]+|uk import|import|collector'?s edition|special edition|director'?s cut)\b/gi, '');
+
+  return t.replace(/[-–—:,]+$/, '').replace(/\s{2,}/g, ' ').trim();
 }
 
 function renderScanOwnedResult(f) {
