@@ -879,9 +879,13 @@ let editFilmId = null, editBsId = null;
 let randomGenre = '', randomExcludeWatched = false, randomPick = null;
 // Barcode scanning state
 let barcodeScanner = null, scanModalBusy = false, pendingScanBarcode = null;
-// TMDB match found for the current scan result (if any), and the one to apply once
-// the user commits to "Add to collection" from the scan modal.
-let lastScanTmdbMatch = null, pendingScanTmdbItem = null;
+// TMDB match found for the current scan result: lastScanTmdbMatch holds a single
+// confident (unique exact-title) match, lastScanTmdbCandidates holds the full list
+// when more than one exact-title match was found (ambiguous — picked by the user
+// instead of guessed). pendingScan* are the "apply once the Add Item modal opens"
+// versions, set when the user commits to "Add to collection" from the scan modal.
+let lastScanTmdbMatch = null, lastScanTmdbCandidates = null;
+let pendingScanTmdbItem = null, pendingScanTmdbCandidates = null;
 // tracks selected boxset id in film modal (null = none, string = id)
 let filmModalBsId = null;
 
@@ -1796,6 +1800,43 @@ function tmdbClear() {
   document.getElementById('m-cast').value = '';
 }
 
+// Render a TMDB results list into #tmdb-results — shared by the manual "Look up"
+// search (tmdbLookup) and the barcode-scan flow, which pre-populates this same list
+// when a scan matches more than one same-titled TMDB entry (see tmdbQuickSearch).
+function renderTmdbResultsList(items, hasMore, nextPage) {
+  const resultsEl = document.getElementById('tmdb-results');
+  resultsEl._tmdbItems = items;
+  resultsEl.style.display = 'block';
+
+  if (!items.length) {
+    resultsEl.innerHTML = '<div class="tmdb-loading">No results found.</div>';
+    return;
+  }
+
+  resultsEl.innerHTML = items.map((item, i) => {
+    const posterEl = item.poster
+      ? `<img src="${item.poster}" alt="" class="tmdb-item-poster">`
+      : `<div class="tmdb-item-poster-blank"><i class="ti ti-photo"></i></div>`;
+    const badge = item.mediaType === 'tv'
+      ? `<span style="font-size:10px;background:rgba(167,139,250,0.15);color:var(--purple);padding:1px 5px;border-radius:3px;margin-left:4px">TV</span>`
+      : `<span style="font-size:10px;background:rgba(96,165,250,0.15);color:var(--blue);padding:1px 5px;border-radius:3px;margin-left:4px">Film</span>`;
+    return `<div class="tmdb-item" onclick="tmdbSelect(${i})">
+      ${posterEl}
+      <div class="tmdb-item-info">
+        <div class="tmdb-item-title">${item.title}${badge}</div>
+        ${item.overview ? `<div class="tmdb-item-meta">${item.overview}…</div>` : ''}
+      </div>
+      ${item.year ? `<span class="tmdb-item-year">${item.year}</span>` : ''}
+    </div>`;
+  }).join('');
+
+  if (hasMore) {
+    resultsEl.innerHTML += `<div class="tmdb-item" onclick="tmdbLookup(${nextPage})" style="justify-content:center;color:var(--text2);gap:6px">
+      <i class="ti ti-dots"></i> Load more results
+    </div>`;
+  }
+}
+
 async function tmdbLookup(page = 1) {
   const title = document.getElementById('m-title').value.trim();
   if (!title) { document.getElementById('m-title').focus(); return; }
@@ -1838,37 +1879,9 @@ async function tmdbLookup(page = 1) {
     const newItems = [...movies, ...shows];
     const existingItems = resultsEl._tmdbItems || [];
     const allItems = [...existingItems, ...newItems];
-    resultsEl._tmdbItems = allItems;
-
-    if (!allItems.length) {
-      resultsEl.innerHTML = '<div class="tmdb-loading">No results found.</div>';
-      return;
-    }
 
     const hasMore = movieData.total_pages > page || tvData.total_pages > page;
-
-    resultsEl.innerHTML = allItems.map((item, i) => {
-      const posterEl = item.poster
-        ? `<img src="${item.poster}" alt="" class="tmdb-item-poster">`
-        : `<div class="tmdb-item-poster-blank"><i class="ti ti-photo"></i></div>`;
-      const badge = item.mediaType === 'tv'
-        ? `<span style="font-size:10px;background:rgba(167,139,250,0.15);color:var(--purple);padding:1px 5px;border-radius:3px;margin-left:4px">TV</span>`
-        : `<span style="font-size:10px;background:rgba(96,165,250,0.15);color:var(--blue);padding:1px 5px;border-radius:3px;margin-left:4px">Film</span>`;
-      return `<div class="tmdb-item" onclick="tmdbSelect(${i})">
-        ${posterEl}
-        <div class="tmdb-item-info">
-          <div class="tmdb-item-title">${item.title}${badge}</div>
-          ${item.overview ? `<div class="tmdb-item-meta">${item.overview}…</div>` : ''}
-        </div>
-        ${item.year ? `<span class="tmdb-item-year">${item.year}</span>` : ''}
-      </div>`;
-    }).join('');
-
-    if (hasMore) {
-      resultsEl.innerHTML += `<div class="tmdb-item" onclick="tmdbLookup(${page + 1})" style="justify-content:center;color:var(--text2);gap:6px">
-        <i class="ti ti-dots"></i> Load more results
-      </div>`;
-    }
+    renderTmdbResultsList(allItems, hasMore, page + 1);
 
   } catch(e) {
     resultsEl.innerHTML = '<div class="tmdb-loading">Lookup failed — check your connection.</div>';
@@ -1938,20 +1951,26 @@ function tmdbDismiss() {
 }
 
 // Search TMDB (movies + TV, same endpoints as the manual "Look up" button) for a given
-// title and return a confident match, or null if nothing qualifies or the request fails.
+// title and return every exact-title match (ignoring case and a leading "a/an/the"),
+// sorted most popular first — an empty array if nothing qualifies or the request fails.
 // Used by the barcode-scan flow to turn a messy UPC-database title into a proper TMDB
 // title/poster/genre/cast instead of relying on the raw scraped text.
 //
-// IMPORTANT: this only returns a result whose title is an exact match (ignoring case and
-// a leading "a/an/the") for the query. TMDB's search is fuzzy and returns lots of loosely
-// related results, and naively picking the most *popular* one is wrong more often than
-// it looks — e.g. scanning "Maverick" matched "Top Gun: Maverick" (far more popular, but
-// a different film), "Monsters" matched "Minions & Monsters", "Splice" matched "Spliced".
-// Requiring an exact title match avoids that class of mistake; when nothing qualifies,
-// the caller falls back to the plain cleaned-up UPC title with no TMDB enrichment, which
-// is a better outcome than confidently auto-filling poster/genre/cast for the wrong title.
+// IMPORTANT: this only ever returns results whose title is an exact match for the
+// query. TMDB's search is fuzzy and returns lots of loosely related results, and
+// naively picking the most *popular* one across all of them is wrong more often than
+// it looks — e.g. scanning "Maverick" matched "Top Gun: Maverick" (far more popular,
+// but a different film), "Monsters" matched "Minions & Monsters", "Splice" matched
+// "Spliced". Requiring an exact title match avoids that class of mistake.
+//
+// It's still possible for more than one DIFFERENT film/show to share the exact same
+// title (there's more than one "Maverick", more than one "Monsters") — popularity
+// alone can't reliably tell those apart either, since the DVD in your hand isn't
+// necessarily the famous one. So the caller treats a single result as a confident
+// auto-fill, but more than one as ambiguous and lets the person pick (same results
+// list the manual "Look up" button shows), rather than silently guessing.
 async function tmdbQuickSearch(title) {
-  if (!title) return null;
+  if (!title) return [];
   try {
     const [movieRes, tvRes] = await Promise.all([
       fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}`),
@@ -1963,6 +1982,7 @@ async function tmdbQuickSearch(title) {
       year: r.release_date ? r.release_date.slice(0, 4) : null,
       poster: r.poster_path ? TMDB_IMG + r.poster_path : null,
       posterFull: r.poster_path ? TMDB_IMG_FULL + r.poster_path : null,
+      overview: (r.overview || '').slice(0, 80),
       popularity: r.popularity || 0,
     }));
     const shows = (tvData.results || []).map(r => ({
@@ -1970,6 +1990,7 @@ async function tmdbQuickSearch(title) {
       year: r.first_air_date ? r.first_air_date.slice(0, 4) : null,
       poster: r.poster_path ? TMDB_IMG + r.poster_path : null,
       posterFull: r.poster_path ? TMDB_IMG_FULL + r.poster_path : null,
+      overview: (r.overview || '').slice(0, 80),
       popularity: r.popularity || 0,
     }));
     const all = [...movies, ...shows];
@@ -1977,11 +1998,10 @@ async function tmdbQuickSearch(title) {
     const norm = s => sortTitle(s || '').toLowerCase().trim();
     const query = norm(title);
     const exact = all.filter(r => norm(r.title) === query);
-    const pool = exact.length ? exact : [];
-    pool.sort((a, b) => b.popularity - a.popularity);
-    return pool[0] || null;
+    exact.sort((a, b) => b.popularity - a.popularity);
+    return exact;
   } catch (e) {
-    return null;
+    return [];
   }
 }
 
@@ -2014,12 +2034,20 @@ function openAddFilm() {
   document.getElementById('tmdb-btn').dataset.poster = '';
   renderBsSelected();
   document.getElementById('film-modal').classList.add('open');
-  // If we got here from the barcode scanner and it found a confident TMDB match,
-  // apply it now — same fields a manual "Look up" + select would fill.
+  // If we got here from the barcode scanner and it found a single confident TMDB
+  // match, apply it now — same fields a manual "Look up" + select would fill.
   if (pendingScanTmdbItem) {
     const item = pendingScanTmdbItem;
     pendingScanTmdbItem = null;
     applyTmdbSelection(item);
+  } else if (pendingScanTmdbCandidates) {
+    // More than one film/show shares this exact title — show the same results list
+    // "Look up" would, already populated, so the user just taps the right one
+    // instead of re-typing the title and searching again themselves.
+    const candidates = pendingScanTmdbCandidates;
+    pendingScanTmdbCandidates = null;
+    document.getElementById('m-title').value = candidates[0].title;
+    renderTmdbResultsList(candidates, false);
   } else {
     setTimeout(() => document.getElementById('m-title').focus(), 50);
   }
@@ -2193,6 +2221,7 @@ async function handleScannedCode(code) {
   code = (code || '').trim();
   if (!code) return;
   lastScanTmdbMatch = null;
+  lastScanTmdbCandidates = null;
   const resultEl = document.getElementById('scan-result');
   resultEl.innerHTML = `<div style="color:var(--text2);font-size:13px">Looking up ${code}…</div>`;
 
@@ -2230,13 +2259,18 @@ async function handleScannedCode(code) {
       // the manual "Look up" button already uses) and prefer its canonical title,
       // poster, year and type when it finds a confident match.
       resultEl.innerHTML = `<div style="color:var(--text2);font-size:13px">Matching "${cleanTitle}" against TMDB…</div>`;
-      const tmdbMatch = await tmdbQuickSearch(cleanTitle);
+      const tmdbCandidates = await tmdbQuickSearch(cleanTitle);
+      // Exactly one exact-title match = confident auto-fill. More than one = can't
+      // tell them apart from the barcode alone (there's more than one "Maverick",
+      // more than one "Monsters") — let the user pick instead of guessing.
+      const tmdbMatch = tmdbCandidates.length === 1 ? tmdbCandidates[0] : null;
       lastScanTmdbMatch = tmdbMatch;
-      const identifiedTitle = tmdbMatch ? tmdbMatch.title : cleanTitle;
+      lastScanTmdbCandidates = tmdbCandidates.length > 1 ? tmdbCandidates : null;
+      const identifiedTitle = tmdbCandidates.length ? tmdbCandidates[0].title : cleanTitle;
 
       const dupe = findDuplicateByTitle(identifiedTitle, null);
-      if (dupe) renderScanPossibleMatchResult(dupe, identifiedTitle, code, tmdbMatch);
-      else renderScanNewResult(identifiedTitle, code, tmdbMatch);
+      if (dupe) renderScanPossibleMatchResult(dupe, identifiedTitle, code, tmdbMatch, tmdbCandidates.length);
+      else renderScanNewResult(identifiedTitle, code, tmdbMatch, tmdbCandidates.length);
     } else {
       renderScanUnknownResult(code, false);
     }
@@ -2320,7 +2354,21 @@ function renderScanOwnedResult(f) {
     </div>`;
 }
 
-function renderScanPossibleMatchResult(dupe, identifiedTitle, code, tmdbMatch) {
+// Small note explaining what, if anything, TMDB found — shared by the "possible
+// match" and "new" scan results. candidateCount: 0 = no exact match at all, 1 =
+// confident single match (tmdbMatch is set), 2+ = ambiguous (more than one film/show
+// shares this exact title — picked after adding rather than guessed).
+function scanTmdbNoteHtml(candidateCount) {
+  if (candidateCount > 1) {
+    return `<div style="font-size:12px;color:var(--text3);margin-top:2px">Found ${candidateCount} films/shows called this on TMDB — you'll pick the right one after adding</div>`;
+  }
+  if (candidateCount === 0) {
+    return `<div style="font-size:12px;color:var(--text3);margin-top:2px">No TMDB match — title may need a manual tidy-up</div>`;
+  }
+  return '';
+}
+
+function renderScanPossibleMatchResult(dupe, identifiedTitle, code, tmdbMatch, candidateCount) {
   const safeTitle = identifiedTitle.replace(/'/g, "\\'");
   const poster = tmdbMatch && tmdbMatch.poster;
   const scannedLabel = identifiedTitle + (tmdbMatch && tmdbMatch.year ? ' (' + tmdbMatch.year + ')' : '');
@@ -2331,6 +2379,7 @@ function renderScanPossibleMatchResult(dupe, identifiedTitle, code, tmdbMatch) {
         <div style="font-weight:600;font-size:14px">🤔 Possible match</div>
         <div style="font-size:13px;color:var(--text2);margin-top:2px">Scanned: ${scannedLabel}</div>
         <div style="font-size:13px;color:var(--text2)">You have: ${dupe.title}${dupe.year ? ' (' + dupe.year + ')' : ''}</div>
+        ${scanTmdbNoteHtml(candidateCount)}
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
@@ -2340,7 +2389,7 @@ function renderScanPossibleMatchResult(dupe, identifiedTitle, code, tmdbMatch) {
     <button class="sec-btn" style="width:100%;margin-top:8px" onclick="resumeScanner()">Scan another</button>`;
 }
 
-function renderScanNewResult(identifiedTitle, code, tmdbMatch) {
+function renderScanNewResult(identifiedTitle, code, tmdbMatch, candidateCount) {
   const safeTitle = identifiedTitle.replace(/'/g, "\\'");
   const poster = tmdbMatch && tmdbMatch.poster;
   const label = identifiedTitle + (tmdbMatch && tmdbMatch.year ? ' (' + tmdbMatch.year + ')' : '');
@@ -2350,7 +2399,7 @@ function renderScanNewResult(identifiedTitle, code, tmdbMatch) {
       <div style="flex:1;min-width:0">
         <div style="font-weight:600;font-size:14px">🆕 Not in your collection</div>
         <div style="font-size:13px;color:var(--text2);margin-top:2px">${label}</div>
-        ${tmdbMatch ? '' : `<div style="font-size:12px;color:var(--text3);margin-top:2px">No TMDB match — title may need a manual tidy-up</div>`}
+        ${scanTmdbNoteHtml(candidateCount)}
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:10px">
@@ -2385,15 +2434,20 @@ function tagBarcodeToExisting(filmId, code) {
 }
 
 // Jump from the scan modal straight into "Add item", pre-filled with the looked-up
-// title (if any), the scanned barcode, and — when the scan found a TMDB match —
-// the same poster/genre/cast/year/type a manual "Look up" + select would have filled.
+// title (if any), the scanned barcode, and — when the scan found a single confident
+// TMDB match — the same poster/genre/cast/year/type a manual "Look up" + select would
+// have filled. When the scan found more than one same-titled match, the TMDB results
+// list opens already populated with those candidates instead, so the only thing left
+// to do is tap the right poster.
 function openAddFromScan(title, code) {
   pendingScanBarcode = code;
   pendingScanTmdbItem = lastScanTmdbMatch;
+  pendingScanTmdbCandidates = lastScanTmdbCandidates;
   lastScanTmdbMatch = null;
+  lastScanTmdbCandidates = null;
   closeModal('scan-modal');
   openAddFilm();
-  if (!pendingScanTmdbItem && title) document.getElementById('m-title').value = title;
+  if (!pendingScanTmdbItem && !pendingScanTmdbCandidates && title) document.getElementById('m-title').value = title;
 }
 
 function manualScanLookup() {
