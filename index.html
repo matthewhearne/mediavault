@@ -2135,15 +2135,22 @@ async function handleScannedCode(code) {
 
   // 2. Not seen before — look it up to get a title, then check that title against the collection.
   // UPCitemdb's trial endpoint doesn't allow direct cross-origin browser requests (no CORS
-  // headers), so the call is routed through a free public CORS proxy (allorigins.win) as a
-  // stopgap. This is best-effort — it can be slower or occasionally flaky since it's a free,
-  // shared, rate-limited service not meant for production use. The proper fix (a small
-  // Supabase Edge Function doing the lookup server-side) is on the roadmap.
+  // headers), so the lookup is done server-side by a small Supabase Edge Function
+  // ("barcode-lookup", deployed from supabase/functions/barcode-lookup) which just forwards
+  // to UPCitemdb and relays the result — CORS doesn't apply to server-to-server calls. A
+  // bounded timeout still guards against a slow/unreachable upstream.
+  const SCAN_LOOKUP_TIMEOUT_MS = 12000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), SCAN_LOOKUP_TIMEOUT_MS);
+  let timedOut = false;
   try {
-    const target = `https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(code)}`;
-    const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`);
+    const res = await fetch(`${SB_URL}/functions/v1/barcode-lookup?upc=${encodeURIComponent(code)}`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${currentAccessToken || SB_KEY}` },
+      signal: controller.signal,
+    });
     const text = await res.text();
     const data = JSON.parse(text);
+    if (!res.ok) throw new Error((data && data.error) || `Lookup function returned ${res.status}`);
     const item = data && data.items && data.items[0];
     if (item && item.title) {
       const cleanTitle = cleanProductTitle(item.title);
@@ -2154,7 +2161,10 @@ async function handleScannedCode(code) {
       renderScanUnknownResult(code, false);
     }
   } catch (e) {
-    renderScanUnknownResult(code, true);
+    timedOut = e && e.name === 'AbortError';
+    renderScanUnknownResult(code, true, timedOut);
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -2212,11 +2222,14 @@ function renderScanNewResult(cleanTitle, code) {
     </div>`;
 }
 
-function renderScanUnknownResult(code, failed) {
+function renderScanUnknownResult(code, failed, timedOut) {
+  let note = 'You can add it manually with this barcode attached, or try another.';
+  if (timedOut) note = 'The lookup service is slow or unavailable right now — ' + note.charAt(0).toLowerCase() + note.slice(1);
+  else if (failed) note = 'Lookup failed — ' + note.charAt(0).toLowerCase() + note.slice(1);
   document.getElementById('scan-result').innerHTML = `
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px">
       <div style="font-weight:600;font-size:14px">❓ Couldn't identify ${code}</div>
-      <div style="font-size:13px;color:var(--text2);margin-top:2px">${failed ? 'Lookup failed — ' : ''}You can add it manually with this barcode attached, or try another.</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:2px">${note}</div>
     </div>
     <div style="display:flex;gap:8px;margin-top:10px">
       <button class="pri-btn" style="flex:1" onclick="openAddFromScan('','${code}')">Add manually</button>

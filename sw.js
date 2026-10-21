@@ -1,4 +1,4 @@
-const CACHE = 'mediavault-v6';
+const CACHE = 'mediavault-v8';
 const PRECACHE = [
   './',
   './index.html',
@@ -42,9 +42,8 @@ self.addEventListener('fetch', e => {
   // Pass live API calls straight through — let them fail naturally offline
   if (url.includes('supabase.co/rest') ||
       url.includes('supabase.co/auth') ||
+      url.includes('supabase.co/functions') ||
       url.includes('themoviedb.org') ||
-      url.includes('upcitemdb.com') ||
-      url.includes('allorigins.win') ||
       url.includes('fonts.gstatic.com')) {
     return;
   }
