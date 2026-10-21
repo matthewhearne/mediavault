@@ -1938,9 +1938,18 @@ function tmdbDismiss() {
 }
 
 // Search TMDB (movies + TV, same endpoints as the manual "Look up" button) for a given
-// title and return the single most popular match, or null if nothing comes back or the
-// request fails. Used by the barcode-scan flow to turn a messy UPC-database title into
-// a proper TMDB title/poster/genre/cast instead of relying on the raw scraped text.
+// title and return a confident match, or null if nothing qualifies or the request fails.
+// Used by the barcode-scan flow to turn a messy UPC-database title into a proper TMDB
+// title/poster/genre/cast instead of relying on the raw scraped text.
+//
+// IMPORTANT: this only returns a result whose title is an exact match (ignoring case and
+// a leading "a/an/the") for the query. TMDB's search is fuzzy and returns lots of loosely
+// related results, and naively picking the most *popular* one is wrong more often than
+// it looks — e.g. scanning "Maverick" matched "Top Gun: Maverick" (far more popular, but
+// a different film), "Monsters" matched "Minions & Monsters", "Splice" matched "Spliced".
+// Requiring an exact title match avoids that class of mistake; when nothing qualifies,
+// the caller falls back to the plain cleaned-up UPC title with no TMDB enrichment, which
+// is a better outcome than confidently auto-filling poster/genre/cast for the wrong title.
 async function tmdbQuickSearch(title) {
   if (!title) return null;
   try {
@@ -1963,8 +1972,14 @@ async function tmdbQuickSearch(title) {
       posterFull: r.poster_path ? TMDB_IMG_FULL + r.poster_path : null,
       popularity: r.popularity || 0,
     }));
-    const all = [...movies, ...shows].sort((a, b) => b.popularity - a.popularity);
-    return all[0] || null;
+    const all = [...movies, ...shows];
+
+    const norm = s => sortTitle(s || '').toLowerCase().trim();
+    const query = norm(title);
+    const exact = all.filter(r => norm(r.title) === query);
+    const pool = exact.length ? exact : [];
+    pool.sort((a, b) => b.popularity - a.popularity);
+    return pool[0] || null;
   } catch (e) {
     return null;
   }
