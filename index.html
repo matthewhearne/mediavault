@@ -2170,33 +2170,55 @@ async function handleScannedCode(code) {
 }
 
 // Strip common retail-listing noise from a UPC-database title so it's closer to a clean
-// film title for matching/pre-filling: leading junk characters some listings prefix
-// ("--Title"), a trailing UPC-code-plus-cast-list some listings append after the real
-// title (e.g. "Green Zone [dvd], 5050582758795, Matt Damon, Greg Kinnear, ..." — cut at
-// the barcode itself, since a run of 6+ digits is never part of a real film title, which
-// is far safer than trying to pattern-match the cast names directly: an earlier attempt
-// at that wrongly truncated titles whose own last two words looked like a name, e.g.
-// "A Beautiful Mind" -> "A", "Good Will Hunting" -> "Good"), bracketed/parenthetical
-// metadata ("[Blu-ray]", "(UK Import)", "(Widescreen)"), and leftover standalone
-// format/edition words.
+// film title for matching/pre-filling. UPCitemdb's listing titles turn out to come in
+// several different messy shapes (confirmed against real scans), so this applies a few
+// targeted, low-risk passes rather than one big pattern:
+//  - leading junk ("--Species")
+//  - a barcode + cast list appended after the title ("Green Zone [dvd], 5050582758795,
+//    Matt Damon, ...") — cut at the barcode itself (6+ digits is never a real title),
+//    which is far safer than pattern-matching the cast names directly: an earlier
+//    attempt at that wrongly truncated real titles whose own last two words looked
+//    like a name, e.g. "A Beautiful Mind" -> "A", "Good Will Hunting" -> "Good"
+//  - a cast list glued onto the FRONT with no space ("Adrien Brody, Sarah
+//    Polley-splice (uk Import) Dvd") — the real title is whatever follows the bare
+//    hyphen
+//  - bracketed/parenthetical metadata ("[Blu-ray]", "(UK Import)", "(Widescreen)")
+//  - standalone format/edition/listing-noise words and phrases ("Dvd", "Free Shipping")
+//  - leftover " - " used purely as a field separator ("Contagion - Dvd - - Free
+//    Shipping." -> "Contagion")
+// This won't catch every format UPCitemdb returns — some listings glue a cast name
+// straight onto the title with no separator at all ("Jeepers Creepers Gina Philips
+// Dvd"), which isn't safely fixable without a real actor-name list to check against.
+// The result is always just a pre-fill in the Add Item form, so it's fine if it
+// occasionally needs a manual tidy-up rather than being perfect every time.
 function cleanProductTitle(raw) {
   let t = (raw || '').trim();
 
   // Leading junk some listings prefix with ("--Species", "*Species").
   t = t.replace(/^[-–—*•\s]+/, '');
 
-  // Cut at the embedded barcode (6+ consecutive digits), dropping it and anything
+  // Cut at an embedded barcode (6+ consecutive digits), dropping it and anything
   // listed after it (typically a comma-separated cast list).
   t = t.split(/\d{6,}/)[0];
+
+  // A cast list glued directly onto the front with a bare hyphen, no space
+  // ("Adrien Brody, Sarah Polley-splice ...") — keep only what follows the hyphen.
+  const castPrefix = t.match(/^(?:[A-Z][a-zA-Z']+\s[A-Z][a-zA-Z']+)(?:,\s*[A-Z][a-zA-Z']+\s[A-Z][a-zA-Z']+)*-(\S.*)$/);
+  if (castPrefix) t = castPrefix[1];
 
   // Bracketed/parenthetical metadata is almost always format/region/edition info,
   // not part of the real title — drop it entirely.
   t = t.replace(/\[[^\]]*\]/g, '').replace(/\([^)]*\)/g, '');
 
-  // Standalone format/edition words left dangling after the stripping above.
-  t = t.replace(/\b(blu-ray|blu ray|dvd|4k uhd|4k|uhd|steelbook|widescreen|full screen|region [a-z0-9]+|uk import|import|collector'?s edition|special edition|director'?s cut)\b/gi, '');
+  // Standalone format/edition/listing-noise words and phrases left dangling after
+  // the stripping above.
+  t = t.replace(/\b(blu-ray|blu ray|dvd|4k uhd|4k|uhd|steelbook|widescreen|full screen|region [a-z0-9]+|uk import|import|collector'?s edition|special edition|director'?s cut|free shipping|fast (?:free )?shipping|free postage|new sealed|brand new|sealed)\b/gi, '');
 
-  t = t.replace(/\s{2,}/g, ' ').trim().replace(/[\s,–—:-]+$/, '').trim();
+  // Once known junk words are gone, a surviving " - " is almost always a leftover
+  // field separator (format/condition/shipping notes), not part of the title.
+  t = t.replace(/\s+-\s+/g, ' ');
+
+  t = t.replace(/\s{2,}/g, ' ').trim().replace(/[\s,.–—:-]+$/, '').trim();
 
   // Some listings are all-lowercase ("--species ...") — at least capitalize the first letter.
   if (t) t = t.charAt(0).toUpperCase() + t.slice(1);
