@@ -879,6 +879,9 @@ let editFilmId = null, editBsId = null;
 let randomGenre = '', randomExcludeWatched = false, randomPick = null;
 // Barcode scanning state
 let barcodeScanner = null, scanModalBusy = false, pendingScanBarcode = null;
+// TMDB match found for the current scan result (if any), and the one to apply once
+// the user commits to "Add to collection" from the scan modal.
+let lastScanTmdbMatch = null, pendingScanTmdbItem = null;
 // tracks selected boxset id in film modal (null = none, string = id)
 let filmModalBsId = null;
 
@@ -1881,7 +1884,14 @@ async function tmdbSelect(i) {
   if (!item) return;
   resultsEl.style.display = 'none';
   resultsEl._tmdbItems = null;
+  await applyTmdbSelection(item);
+}
 
+// Fill the film modal's fields from a chosen TMDB item (title/year/type immediately,
+// then genre/cast once the detail fetch completes). Shared by the manual "Look up"
+// results list (tmdbSelect) and the barcode-scan flow, which finds its own TMDB match
+// before the modal is even open.
+async function applyTmdbSelection(item) {
   // Fill basic fields immediately
   document.getElementById('m-title').value = item.title;
   if (item.year) document.getElementById('m-year').value = item.year;
@@ -1927,6 +1937,39 @@ function tmdbDismiss() {
   if (el) { el.style.display = 'none'; }
 }
 
+// Search TMDB (movies + TV, same endpoints as the manual "Look up" button) for a given
+// title and return the single most popular match, or null if nothing comes back or the
+// request fails. Used by the barcode-scan flow to turn a messy UPC-database title into
+// a proper TMDB title/poster/genre/cast instead of relying on the raw scraped text.
+async function tmdbQuickSearch(title) {
+  if (!title) return null;
+  try {
+    const [movieRes, tvRes] = await Promise.all([
+      fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}`),
+      fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}`),
+    ]);
+    const [movieData, tvData] = await Promise.all([movieRes.json(), tvRes.json()]);
+    const movies = (movieData.results || []).map(r => ({
+      id: r.id, mediaType: 'movie', title: r.title,
+      year: r.release_date ? r.release_date.slice(0, 4) : null,
+      poster: r.poster_path ? TMDB_IMG + r.poster_path : null,
+      posterFull: r.poster_path ? TMDB_IMG_FULL + r.poster_path : null,
+      popularity: r.popularity || 0,
+    }));
+    const shows = (tvData.results || []).map(r => ({
+      id: r.id, mediaType: 'tv', title: r.name,
+      year: r.first_air_date ? r.first_air_date.slice(0, 4) : null,
+      poster: r.poster_path ? TMDB_IMG + r.poster_path : null,
+      posterFull: r.poster_path ? TMDB_IMG_FULL + r.poster_path : null,
+      popularity: r.popularity || 0,
+    }));
+    const all = [...movies, ...shows].sort((a, b) => b.popularity - a.popularity);
+    return all[0] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // ── Film modal ──
 function openAddFilm() {
   if (!isAdmin()) return;
@@ -1956,7 +1999,15 @@ function openAddFilm() {
   document.getElementById('tmdb-btn').dataset.poster = '';
   renderBsSelected();
   document.getElementById('film-modal').classList.add('open');
-  setTimeout(() => document.getElementById('m-title').focus(), 50);
+  // If we got here from the barcode scanner and it found a confident TMDB match,
+  // apply it now — same fields a manual "Look up" + select would fill.
+  if (pendingScanTmdbItem) {
+    const item = pendingScanTmdbItem;
+    pendingScanTmdbItem = null;
+    applyTmdbSelection(item);
+  } else {
+    setTimeout(() => document.getElementById('m-title').focus(), 50);
+  }
 }
 
 function openEditFilm(id) {
@@ -2126,6 +2177,7 @@ function resumeScanner() {
 async function handleScannedCode(code) {
   code = (code || '').trim();
   if (!code) return;
+  lastScanTmdbMatch = null;
   const resultEl = document.getElementById('scan-result');
   resultEl.innerHTML = `<div style="color:var(--text2);font-size:13px">Looking up ${code}…</div>`;
 
@@ -2155,9 +2207,21 @@ async function handleScannedCode(code) {
     if (item && item.title) {
       console.log('MediaVault scan: raw UPC title —', JSON.stringify(item.title));
       const cleanTitle = cleanProductTitle(item.title);
-      const dupe = findDuplicateByTitle(cleanTitle, null);
-      if (dupe) renderScanPossibleMatchResult(dupe, cleanTitle, code);
-      else renderScanNewResult(cleanTitle, code);
+
+      // UPCitemdb's own title text is often messy (region/format noise, cast lists
+      // glued on with no reliable separator — see cleanProductTitle's notes). Rather
+      // than keep hand-tuning regexes for every new format it returns, use the
+      // cleaned-up guess as a search query into TMDB (the same database/endpoints
+      // the manual "Look up" button already uses) and prefer its canonical title,
+      // poster, year and type when it finds a confident match.
+      resultEl.innerHTML = `<div style="color:var(--text2);font-size:13px">Matching "${cleanTitle}" against TMDB…</div>`;
+      const tmdbMatch = await tmdbQuickSearch(cleanTitle);
+      lastScanTmdbMatch = tmdbMatch;
+      const identifiedTitle = tmdbMatch ? tmdbMatch.title : cleanTitle;
+
+      const dupe = findDuplicateByTitle(identifiedTitle, null);
+      if (dupe) renderScanPossibleMatchResult(dupe, identifiedTitle, code, tmdbMatch);
+      else renderScanNewResult(identifiedTitle, code, tmdbMatch);
     } else {
       renderScanUnknownResult(code, false);
     }
@@ -2241,13 +2305,18 @@ function renderScanOwnedResult(f) {
     </div>`;
 }
 
-function renderScanPossibleMatchResult(dupe, cleanTitle, code) {
-  const safeTitle = cleanTitle.replace(/'/g, "\\'");
+function renderScanPossibleMatchResult(dupe, identifiedTitle, code, tmdbMatch) {
+  const safeTitle = identifiedTitle.replace(/'/g, "\\'");
+  const poster = tmdbMatch && tmdbMatch.poster;
+  const scannedLabel = identifiedTitle + (tmdbMatch && tmdbMatch.year ? ' (' + tmdbMatch.year + ')' : '');
   document.getElementById('scan-result').innerHTML = `
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px">
-      <div style="font-weight:600;font-size:14px">🤔 Possible match</div>
-      <div style="font-size:13px;color:var(--text2);margin-top:2px">Scanned: ${cleanTitle}</div>
-      <div style="font-size:13px;color:var(--text2)">You have: ${dupe.title}${dupe.year ? ' (' + dupe.year + ')' : ''}</div>
+    <div style="display:flex;gap:10px;align-items:flex-start;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px">
+      ${poster ? `<img src="${poster}" style="width:36px;height:54px;object-fit:cover;border-radius:4px;flex-shrink:0">` : ''}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:14px">🤔 Possible match</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:2px">Scanned: ${scannedLabel}</div>
+        <div style="font-size:13px;color:var(--text2)">You have: ${dupe.title}${dupe.year ? ' (' + dupe.year + ')' : ''}</div>
+      </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
       <button class="sec-btn" style="flex:1" onclick="tagBarcodeToExisting(${dupe.id},'${code}')">Yes, same item</button>
@@ -2256,12 +2325,18 @@ function renderScanPossibleMatchResult(dupe, cleanTitle, code) {
     <button class="sec-btn" style="width:100%;margin-top:8px" onclick="resumeScanner()">Scan another</button>`;
 }
 
-function renderScanNewResult(cleanTitle, code) {
-  const safeTitle = cleanTitle.replace(/'/g, "\\'");
+function renderScanNewResult(identifiedTitle, code, tmdbMatch) {
+  const safeTitle = identifiedTitle.replace(/'/g, "\\'");
+  const poster = tmdbMatch && tmdbMatch.poster;
+  const label = identifiedTitle + (tmdbMatch && tmdbMatch.year ? ' (' + tmdbMatch.year + ')' : '');
   document.getElementById('scan-result').innerHTML = `
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px">
-      <div style="font-weight:600;font-size:14px">🆕 Not in your collection</div>
-      <div style="font-size:13px;color:var(--text2);margin-top:2px">${cleanTitle}</div>
+    <div style="display:flex;gap:10px;align-items:flex-start;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px">
+      ${poster ? `<img src="${poster}" style="width:36px;height:54px;object-fit:cover;border-radius:4px;flex-shrink:0">` : ''}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:14px">🆕 Not in your collection</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:2px">${label}</div>
+        ${tmdbMatch ? '' : `<div style="font-size:12px;color:var(--text3);margin-top:2px">No TMDB match — title may need a manual tidy-up</div>`}
+      </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:10px">
       <button class="pri-btn" style="flex:1" onclick="openAddFromScan('${safeTitle}','${code}')">Add to collection</button>
@@ -2295,12 +2370,15 @@ function tagBarcodeToExisting(filmId, code) {
 }
 
 // Jump from the scan modal straight into "Add item", pre-filled with the looked-up
-// title (if any) and the scanned barcode.
+// title (if any), the scanned barcode, and — when the scan found a TMDB match —
+// the same poster/genre/cast/year/type a manual "Look up" + select would have filled.
 function openAddFromScan(title, code) {
   pendingScanBarcode = code;
+  pendingScanTmdbItem = lastScanTmdbMatch;
+  lastScanTmdbMatch = null;
   closeModal('scan-modal');
   openAddFilm();
-  if (title) document.getElementById('m-title').value = title;
+  if (!pendingScanTmdbItem && title) document.getElementById('m-title').value = title;
 }
 
 function manualScanLookup() {
