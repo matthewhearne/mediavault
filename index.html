@@ -2171,20 +2171,23 @@ async function handleScannedCode(code) {
 
 // Strip common retail-listing noise from a UPC-database title so it's closer to a clean
 // film title for matching/pre-filling: leading junk characters some listings prefix
-// ("--Title"), bracketed/parenthetical metadata ("[Blu-ray]", "(UK Import)",
-// "(Widescreen)"), and leftover standalone format/edition words.
-//
-// NOTE: this deliberately does NOT try to strip a trailing cast list (e.g. "Green
-// Zone ... Matt Damon, Greg Kinnear, Brendan Gleeson"). A regex for that turned out
-// to be unsafe — titles whose own last two words happen to look like a name
-// ("A Beautiful Mind", "Good Will Hunting", "The Dark Knight Rises") got wrongly
-// truncated down to "A", "Good", "The Dark", etc. Left for a future pass once we
-// know the exact raw format UPCitemdb returns (see console.log below).
+// ("--Title"), a trailing UPC-code-plus-cast-list some listings append after the real
+// title (e.g. "Green Zone [dvd], 5050582758795, Matt Damon, Greg Kinnear, ..." — cut at
+// the barcode itself, since a run of 6+ digits is never part of a real film title, which
+// is far safer than trying to pattern-match the cast names directly: an earlier attempt
+// at that wrongly truncated titles whose own last two words looked like a name, e.g.
+// "A Beautiful Mind" -> "A", "Good Will Hunting" -> "Good"), bracketed/parenthetical
+// metadata ("[Blu-ray]", "(UK Import)", "(Widescreen)"), and leftover standalone
+// format/edition words.
 function cleanProductTitle(raw) {
   let t = (raw || '').trim();
 
   // Leading junk some listings prefix with ("--Species", "*Species").
   t = t.replace(/^[-–—*•\s]+/, '');
+
+  // Cut at the embedded barcode (6+ consecutive digits), dropping it and anything
+  // listed after it (typically a comma-separated cast list).
+  t = t.split(/\d{6,}/)[0];
 
   // Bracketed/parenthetical metadata is almost always format/region/edition info,
   // not part of the real title — drop it entirely.
@@ -2193,7 +2196,12 @@ function cleanProductTitle(raw) {
   // Standalone format/edition words left dangling after the stripping above.
   t = t.replace(/\b(blu-ray|blu ray|dvd|4k uhd|4k|uhd|steelbook|widescreen|full screen|region [a-z0-9]+|uk import|import|collector'?s edition|special edition|director'?s cut)\b/gi, '');
 
-  return t.replace(/[-–—:,]+$/, '').replace(/\s{2,}/g, ' ').trim();
+  t = t.replace(/\s{2,}/g, ' ').trim().replace(/[\s,–—:-]+$/, '').trim();
+
+  // Some listings are all-lowercase ("--species ...") — at least capitalize the first letter.
+  if (t) t = t.charAt(0).toUpperCase() + t.slice(1);
+
+  return t;
 }
 
 function renderScanOwnedResult(f) {
