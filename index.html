@@ -90,9 +90,11 @@
   .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
   .search-wrap { flex: 1; min-width: 180px; position: relative; }
   .search-wrap i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 15px; pointer-events: none; }
-  .search-wrap input { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 12px 8px 34px; border-radius: var(--radius); outline: none; transition: border-color 0.12s; }
+  .search-wrap input { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 32px 8px 34px; border-radius: var(--radius); outline: none; transition: border-color 0.12s; }
   .search-wrap input:focus { border-color: var(--border-hover); }
   .search-wrap input::placeholder { color: var(--text3); }
+  .input-clear-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; line-height: 1; padding: 4px; display: flex; align-items: center; z-index: 1; }
+  .input-clear-btn:hover { color: var(--text); }
   select.ctrl { background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 10px; border-radius: var(--radius); outline: none; cursor: pointer; }
   select.ctrl option { background: #1f1f24; }
   .add-btn { display: flex; align-items: center; gap: 6px; background: var(--accent); color: #0a0a0b; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: var(--radius); cursor: pointer; white-space: nowrap; transition: opacity 0.12s; }
@@ -592,7 +594,7 @@
         <div id="all-actors-count" style="font-size:13px;color:var(--text3)"></div>
         <div style="margin-left:auto;position:relative">
           <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
-          <input id="all-actors-search" type="text" placeholder="Filter actors…" oninput="filterAllActors()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px 7px 30px;border-radius:var(--radius);outline:none;width:200px">
+          <input id="all-actors-search" type="text" placeholder="Filter actors…" oninput="filterAllActors()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 30px 7px 30px;border-radius:var(--radius);outline:none;width:200px">
         </div>
       </div>
       <div id="all-actors-chart"></div>
@@ -644,7 +646,7 @@
         <div id="log-collection-panel">
           <div style="position:relative;margin-bottom:6px">
             <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
-            <input id="log-coll-search" type="text" placeholder="Filter collection…" oninput="renderCollectionPicker()" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 12px 8px 32px;border-radius:var(--radius);outline:none">
+            <input id="log-coll-search" type="text" placeholder="Filter collection…" oninput="renderCollectionPicker()" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 30px 8px 32px;border-radius:var(--radius);outline:none">
           </div>
           <div class="collection-picker" id="log-coll-list"></div>
         </div>
@@ -830,7 +832,9 @@
       <div class="fg">
         <label>Box set</label>
         <div id="bs-selected-display"></div>
-        <input id="bs-search-input" placeholder="Search or create a box set…" oninput="onBsSearch()" autocomplete="off">
+        <div style="position:relative">
+          <input id="bs-search-input" placeholder="Search or create a box set…" oninput="onBsSearch()" autocomplete="off" style="padding-right:32px">
+        </div>
         <div id="bs-search-results"></div>
       </div>
     </div>
@@ -1484,9 +1488,20 @@ function renderSidebar() {
 
 // ── Film row HTML ──
 function getDiaryEntryForFilm(f) {
-  // Match by title (case-insensitive) — find the most recent watched entry
-  const titleLower = f.title.toLowerCase();
-  const matches = diary.filter(e => e.title.toLowerCase() === titleLower);
+  // Match by title (case-insensitive), AND by year when both sides know it — otherwise
+  // two different titles/shows sharing the same name (e.g. two different "Edge of
+  // Darkness") cross-contaminate each other's watched/rating status: a diary entry for
+  // one would incorrectly show up against the other. Year is compared numerically since
+  // it can be stored as either a number or a string depending on how the entry was
+  // logged (typed in vs. picked from a TMDB search result).
+  const titleLower = (f.title || '').toLowerCase();
+  const fYear = f.year ? Number(f.year) : null;
+  const matches = diary.filter(e => {
+    if ((e.title || '').toLowerCase() !== titleLower) return false;
+    const eYear = e.year ? Number(e.year) : null;
+    if (fYear && eYear && fYear !== eYear) return false;
+    return true;
+  });
   if (!matches.length) return null;
   return matches.sort((a, b) => {
     if (a.watchedDate > b.watchedDate) return -1;
@@ -1727,6 +1742,7 @@ function renderBsSelected() {
 function clearBsSelection() {
   filmModalBsId = null;
   document.getElementById('bs-search-input').value = '';
+  document.getElementById('bs-search-input').dispatchEvent(new Event('input'));
   document.getElementById('bs-search-results').innerHTML = '';
   renderBsSelected();
 }
@@ -1757,6 +1773,7 @@ function onBsSearch() {
 function pickBs(id) {
   filmModalBsId = id;
   document.getElementById('bs-search-input').value = '';
+  document.getElementById('bs-search-input').dispatchEvent(new Event('input'));
   document.getElementById('bs-search-results').innerHTML = '';
   renderBsSelected();
 }
@@ -2027,6 +2044,7 @@ function openAddFilm() {
   pendingScanBarcode = null;
   document.getElementById('new-bs-name') && (document.getElementById('new-bs-name').value = '');
   document.getElementById('bs-search-input').value = '';
+  document.getElementById('bs-search-input').dispatchEvent(new Event('input'));
   document.getElementById('bs-search-results').innerHTML = '';
   document.getElementById('tmdb-results').style.display = 'none';
   document.getElementById('tmdb-selected-wrap').style.display = 'none';
@@ -2074,6 +2092,7 @@ function openEditFilm(id) {
   document.getElementById('m-lent-clear-wrap').style.display = f.lentTo ? '' : 'none';
   document.getElementById('m-barcode').value = f.barcode || '';
   document.getElementById('bs-search-input').value = '';
+  document.getElementById('bs-search-input').dispatchEvent(new Event('input'));
   document.getElementById('bs-search-results').innerHTML = '';
   document.getElementById('tmdb-results').style.display = 'none';
   // Show existing poster preview if present
@@ -2695,6 +2714,7 @@ function renderAllActors() {
   });
   allActorsData = Object.entries(actorMap).sort((a,b) => b[1]-a[1]);
   document.getElementById('all-actors-search').value = '';
+  document.getElementById('all-actors-search').dispatchEvent(new Event('input'));
   filterAllActors();
 }
 
@@ -3150,6 +3170,7 @@ function openLogFilm() {
   document.getElementById('log-selected-wrap').style.display = 'none';
   document.getElementById('log-selected-wrap').innerHTML = '';
   document.getElementById('log-coll-search').value = '';
+  document.getElementById('log-coll-search').dispatchEvent(new Event('input'));
   document.getElementById('log-tmdb-title').value = '';
   document.getElementById('log-tmdb-results').style.display = 'none';
 
@@ -3176,6 +3197,7 @@ function openEditDiaryEntry(id) {
   document.getElementById('log-notes').value = e.notes || '';
 
   document.getElementById('log-coll-search').value = '';
+  document.getElementById('log-coll-search').dispatchEvent(new Event('input'));
   document.getElementById('log-tmdb-title').value = '';
   document.getElementById('log-tmdb-results').style.display = 'none';
 
@@ -3438,9 +3460,47 @@ function closeModal(id) {
 }
 function overlayClick(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
 
+// ── Clearable search inputs: adds an "x" button once the field has a value,
+// clicking it clears the field, refires whatever filter the field drives, and
+// refocuses it. Works alongside places that clear a field's value directly in
+// JS (those call sites dispatch a synthetic 'input' event so this stays in sync). ──
+function wireClearButton(inputId, onClear) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const wrap = input.parentElement;
+  if (!wrap) return;
+  function sync() {
+    const hasVal = !!input.value;
+    let btn = wrap.querySelector('.input-clear-btn');
+    if (hasVal && !btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'input-clear-btn';
+      btn.title = 'Clear';
+      btn.innerHTML = '<i class="ti ti-x"></i>';
+      btn.onclick = () => {
+        input.value = '';
+        input.focus();
+        onClear();
+        sync();
+      };
+      wrap.appendChild(btn);
+    } else if (!hasVal && btn) {
+      btn.remove();
+    }
+  }
+  input.addEventListener('input', sync);
+  sync();
+}
+
 // ── Init ──
 load();
 render();
+wireClearButton('q', () => goPage(1));
+wireClearButton('all-actors-search', () => filterAllActors());
+wireClearButton('diary-q', () => renderDiary());
+wireClearButton('log-coll-search', () => renderCollectionPicker());
+wireClearButton('bs-search-input', () => onBsSearch());
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
