@@ -105,6 +105,38 @@
   .add-btn { display: flex; align-items: center; gap: 6px; background: var(--accent); color: #0a0a0b; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: var(--radius); cursor: pointer; white-space: nowrap; transition: opacity 0.12s; }
   .add-btn:hover { opacity: 0.88; }
 
+  /* View toggle (grid / list) */
+  .view-toggle { display: flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; flex-shrink: 0; }
+  .view-toggle button { background: var(--surface); border: none; color: var(--text3); padding: 8px 10px; cursor: pointer; display: flex; align-items: center; font-size: 15px; transition: background 0.12s, color 0.12s; }
+  .view-toggle button:not(:last-child) { border-right: 1px solid var(--border); }
+  .view-toggle button:hover { color: var(--text); }
+  .view-toggle button.active { background: var(--accent-dim); color: var(--accent); }
+
+  /* Grid view */
+  .grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px 16px; }
+  .grid-tile { cursor: pointer; }
+  .grid-tile-poster-wrap { position: relative; aspect-ratio: 2 / 3; border-radius: var(--radius); overflow: hidden; border: 2px solid var(--border); background: var(--surface2); transition: transform 0.12s; }
+  .grid-tile:hover .grid-tile-poster-wrap { transform: translateY(-3px); }
+  .grid-tile-poster-wrap.fmt-border-DVD { border-color: var(--blue); }
+  .grid-tile-poster-wrap.fmt-border-Blu-Ray { border-color: var(--green); }
+  .grid-tile-poster-wrap.fmt-border-4K { border-color: var(--purple); }
+  .grid-tile-poster-wrap.fmt-border-wanted { border-style: dashed; border-color: var(--text3); opacity: 0.75; }
+  .grid-tile-poster-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .grid-tile-noposter { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 32px; }
+  .grid-pill { position: absolute; top: 6px; left: 6px; display: flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 7px; border-radius: 4px; background: rgba(10,10,12,0.72); color: var(--text2); }
+  .grid-pill.fmt-DVD { color: var(--blue); }
+  .grid-pill.fmt-Blu-Ray { color: var(--green); }
+  .grid-pill.fmt-4K { color: var(--purple); }
+  .grid-pill.fmt-wanted { color: var(--text3); }
+  .grid-tile-info { padding-top: 8px; }
+  .grid-tile-title { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .grid-tile-year { font-size: 12px; color: var(--text3); margin-top: 3px; }
+  .grid-tile-genre { font-size: 11px; color: var(--text3); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-width: 768px) {
+    .grid-view { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 14px 10px; }
+    .grid-tile-title { font-size: 12px; }
+  }
+
   /* Table */
   .table-wrap { border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; background: var(--surface); }
   table { width: 100%; border-collapse: collapse; table-layout: auto; }
@@ -548,6 +580,10 @@
           <option value="added">Recently added</option>
         </select>
         <button class="sec-btn random-btn" onclick="openRandomPick()" title="Pick something to watch"><i class="ti ti-dice-5"></i> What should I watch?</button>
+        <div class="view-toggle" id="view-toggle">
+          <button type="button" onclick="setViewMode('grid')" title="Grid view"><i class="ti ti-layout-grid"></i></button>
+          <button type="button" onclick="setViewMode('list')" title="List view"><i class="ti ti-list"></i></button>
+        </div>
       </div>
       <div id="filter-chips"></div>
       <div id="pager-wrap-top"></div>
@@ -888,6 +924,14 @@ const GOOGLE_CLIENT_ID = '625476206146-fjk8ot2sk4tg7pml0rpk2hv04rhtc2ml.apps.goo
 let perPage = 15;
 let films = [], boxSets = [];
 let activeFilter = 'owned', activeType = 'all', activeFormat = null, activeYear = null, activeGenre = null, activeCast = null, currentPage = 1;
+// Collection view mode: 'grid' (poster-forward, default) or 'list' (table). Remembered per-browser.
+let viewMode = (() => { try { return localStorage.getItem('mediavault_view_mode') || 'grid'; } catch(e) { return 'grid'; } })();
+function setViewMode(mode) {
+  if (mode !== 'grid' && mode !== 'list') return;
+  viewMode = mode;
+  try { localStorage.setItem('mediavault_view_mode', mode); } catch(e) {}
+  renderList();
+}
 let editFilmId = null, editBsId = null;
 // "What should I watch?" random picker state
 let randomGenre = '', randomExcludeWatched = false, randomPick = null;
@@ -1577,6 +1621,34 @@ function filmRowHtml(f) {
   </tr>`;
 }
 
+// ── Grid view tile ──
+// Owned items get a coloured border/pill matching their format (reusing the
+// same blue/green/purple used elsewhere for DVD/Blu-Ray/4K). Unowned items
+// (only reachable here via the Watchlist filter, since the default view is
+// owned-only already) get a dashed, dimmed border instead — with a "Wanted"
+// pill if marked wanted, or no pill at all if it's watchlist-only.
+function gridTileHtml(f) {
+  const owned = isOwned(f);
+  const borderCls = owned ? `fmt-border-${f.format}` : 'fmt-border-wanted';
+  const pillCls = owned ? `fmt-${f.format}` : 'fmt-wanted';
+  const pillLabel = owned ? f.format : (f.wanted ? 'Wanted' : '');
+  const pill = pillLabel ? `<span class="grid-pill ${pillCls}">${pillLabel}</span>` : '';
+  const posterInner = f.poster
+    ? `<img src="${f.poster}" alt="" loading="lazy">`
+    : `<div class="grid-tile-noposter"><i class="ti ti-movie"></i></div>`;
+  return `<div class="grid-tile" ${isAdmin() ? `onclick="openEditFilm(${f.id})"` : ''}>
+    <div class="grid-tile-poster-wrap ${borderCls}">
+      ${posterInner}
+      ${pill}
+    </div>
+    <div class="grid-tile-info">
+      <div class="grid-tile-title">${f.title}</div>
+      <div class="grid-tile-year">${f.year || ''}</div>
+      ${f.genre ? `<div class="grid-tile-genre">${f.genre}</div>` : ''}
+    </div>
+  </div>`;
+}
+
 const TABLE_HEAD_DESKTOP = `<thead><tr>
     <th>Film</th><th class="col-format" style="width:90px">Format</th>
     <th class="col-diary" style="width:100px">Last watched</th>
@@ -1599,6 +1671,14 @@ function renderList() {
   const wrap = document.getElementById('list-wrap');
   const pagerEl = document.getElementById('pager-wrap');
 
+  // Keep the view-toggle buttons' active state in sync
+  const toggleEl = document.getElementById('view-toggle');
+  if (toggleEl) {
+    toggleEl.querySelectorAll('button').forEach(btn => {
+      btn.classList.toggle('active', btn.title.toLowerCase().startsWith(viewMode));
+    });
+  }
+
   // Active filter chips (format / genre / cast)
   const chips = [];
   if (activeFormat) chips.push(`<div class="filter-chip"><i class="ti ti-disc"></i>${activeFormat}<button onclick="toggleFormat('${activeFormat}')"><i class="ti ti-x"></i></button></div>`);
@@ -1606,7 +1686,8 @@ function renderList() {
   if (activeCast)   chips.push(`<div class="filter-chip"><i class="ti ti-user"></i>${activeCast}<button onclick="setCast('${activeCast.replace(/'/g,"\\'")}')"><i class="ti ti-x"></i></button></div>`);
   document.getElementById('filter-chips').innerHTML = chips.length ? `<div class="filter-chips">${chips.join('')}</div>` : '';
 
-  // Box sets grouped view
+  // Box sets grouped view — always renders as grouped tables regardless of
+  // viewMode; grid tiles don't have an obvious box-set-grouped equivalent yet.
   if (activeFilter === 'boxsets') {
     if (!boxSets.length) {
       wrap.innerHTML = `<div class="empty"><i class="ti ti-package"></i><p>No box sets yet. Create one when adding a film.</p></div>`;
@@ -1646,7 +1727,9 @@ function renderList() {
     pagerEl.innerHTML = ''; return;
   }
 
-  wrap.innerHTML = `<div class="table-wrap"><table>${getTableHead()}<tbody>${slice.map(filmRowHtml).join('')}</tbody></table></div>`;
+  wrap.innerHTML = (viewMode === 'grid')
+    ? `<div class="grid-view">${slice.map(gridTileHtml).join('')}</div>`
+    : `<div class="table-wrap"><table>${getTableHead()}<tbody>${slice.map(filmRowHtml).join('')}</tbody></table></div>`;
 
   const perPageSel = `<select class="ctrl" onchange="setPerPage(this.value)" title="Items per page" style="padding:5px 8px;font-size:12px">
     ${[15,25,50,100].map(n => `<option value="${n}"${n===perPage?' selected':''}>${n} per page</option>`).join('')}
