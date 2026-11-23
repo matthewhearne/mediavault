@@ -923,7 +923,9 @@
 const GOOGLE_CLIENT_ID = '625476206146-fjk8ot2sk4tg7pml0rpk2hv04rhtc2ml.apps.googleusercontent.com';
 let perPage = 15;
 let films = [], boxSets = [];
-let activeFilter = 'owned', activeType = 'all', activeFormat = null, activeYear = null, activeGenre = null, activeCast = null, currentPage = 1;
+let activeFilter = 'owned', activeType = 'all', activeFormat = null, activeYear = null, activeGenre = null, activeCast = null;
+// Endless list: how many of the current filtered/sorted items are rendered so far.
+let loadedCount = perPage;
 // Collection view mode: 'grid' (poster-forward, default) or 'list' (table). Remembered per-browser.
 let viewMode = (() => { try { return localStorage.getItem('mediavault_view_mode') || 'grid'; } catch(e) { return 'grid'; } })();
 function setViewMode(mode) {
@@ -1715,11 +1717,12 @@ function renderList() {
     return;
   }
 
-  // Normal paginated list
+  // Endless list: render the first `loadedCount` items; scrolling #main-view
+  // near the bottom (see the listener set up in initInfiniteScroll) grows
+  // loadedCount and re-renders, rather than paginating by page number.
   const filtered = getFiltered();
-  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
-  if (currentPage > totalPages) currentPage = totalPages;
-  const slice = filtered.slice((currentPage-1)*perPage, currentPage*perPage);
+  if (loadedCount < perPage) loadedCount = perPage;
+  const slice = filtered.slice(0, loadedCount);
 
   if (!slice.length) {
     wrap.innerHTML = `<div class="empty"><i class="ti ti-movie-off"></i><p>No items match your filter.</p></div>`;
@@ -1731,35 +1734,15 @@ function renderList() {
     ? `<div class="grid-view">${slice.map(gridTileHtml).join('')}</div>`
     : `<div class="table-wrap"><table>${getTableHead()}<tbody>${slice.map(filmRowHtml).join('')}</tbody></table></div>`;
 
-  const perPageSel = `<select class="ctrl" onchange="setPerPage(this.value)" title="Items per page" style="padding:5px 8px;font-size:12px">
-    ${[15,25,50,100].map(n => `<option value="${n}"${n===perPage?' selected':''}>${n} per page</option>`).join('')}
+  const hasMore = slice.length < filtered.length;
+  const perPageSel = `<select class="ctrl" onchange="setPerPage(this.value)" title="How many items load at a time" style="padding:5px 8px;font-size:12px">
+    ${[15,25,50,100].map(n => `<option value="${n}"${n===perPage?' selected':''}>${n} at a time</option>`).join('')}
   </select>`;
 
-  if (totalPages <= 1) {
-    const simpleInfo = `<div class="pager"><span>${filtered.length} item${filtered.length!==1?'s':''}</span>${perPageSel}</div>`;
-    document.getElementById('pager-wrap-top').innerHTML = simpleInfo;
-    pagerEl.innerHTML = simpleInfo;
-    return;
-  }
-
-  let pgBtns = '';
-  for (let i = 1; i <= totalPages; i++) {
-    if (totalPages > 9 && i > 2 && i < totalPages-1 && Math.abs(i-currentPage) > 1) {
-      if (i===3||i===totalPages-2) pgBtns += `<span style="padding:0 4px;color:var(--text3)">…</span>`;
-      continue;
-    }
-    pgBtns += `<button class="pg-btn${i===currentPage?' active':''}" onclick="goPage(${i})">${i}</button>`;
-  }
-
   const pagerHtml = `<div class="pager">
-    <span>${filtered.length} item${filtered.length!==1?'s':''}</span>
-    <div class="pages">
-      <button class="pg-btn" onclick="goPage(${currentPage-1})" ${currentPage<=1?'disabled':''}><i class="ti ti-chevron-left"></i></button>
-      ${pgBtns}
-      <button class="pg-btn" onclick="goPage(${currentPage+1})" ${currentPage>=totalPages?'disabled':''}><i class="ti ti-chevron-right"></i></button>
-    </div>
+    <span>${slice.length} of ${filtered.length} item${filtered.length!==1?'s':''}</span>
     <div style="display:flex;align-items:center;gap:10px">
-      <span style="color:var(--text2);font-size:13px">Page ${currentPage} of ${totalPages}</span>
+      ${hasMore ? `<button class="sec-btn" onclick="loadMore()">Load more</button>` : ''}
       ${perPageSel}
     </div>
   </div>`;
@@ -1769,32 +1752,59 @@ function renderList() {
 }
 
 function render() { renderStats(); renderSidebar(); populateYearDropdown(); renderList(); }
-function goPage(p) { currentPage = p; renderList(); }
-function setPerPage(n) { perPage = parseInt(n); currentPage = 1; renderList(); }
+// Kept as goPage(1) for the existing search/year/sort oninput hooks — there
+// are no page numbers any more, this just resets back to the first batch.
+function goPage() {
+  loadedCount = perPage;
+  const mainEl = document.getElementById('main-view');
+  if (mainEl) mainEl.scrollTop = 0;
+  renderList();
+}
+function setPerPage(n) { perPage = parseInt(n); loadedCount = perPage; renderList(); }
+function loadMore() {
+  const filtered = getFiltered();
+  if (loadedCount >= filtered.length) return;
+  loadedCount = Math.min(loadedCount + perPage, filtered.length);
+  renderList();
+}
+// Grows loadedCount automatically as #main-view is scrolled near its bottom.
+function initInfiniteScroll() {
+  const mainEl = document.getElementById('main-view');
+  if (!mainEl) return;
+  let ticking = false;
+  mainEl.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      if (mainEl.scrollTop + mainEl.clientHeight >= mainEl.scrollHeight - 400) loadMore();
+      ticking = false;
+    });
+  });
+}
 
 // ── Filters ──
 function setFilter(f) {
-  activeFilter = f; activeFormat = null; activeGenre = null; activeCast = null; window._decadeFilter = null; currentPage = 1; closeDrawer(); render();
+  activeFilter = f; activeFormat = null; activeGenre = null; activeCast = null; window._decadeFilter = null; loadedCount = perPage; closeDrawer(); render();
 }
 function setType(t) {
-  activeType = t; currentPage = 1; closeDrawer(); render();
+  activeType = t; loadedCount = perPage; closeDrawer(); render();
 }
 function toggleFormat(fmt) {
   activeFormat = activeFormat === fmt ? null : fmt;
-  currentPage = 1; closeDrawer(); render();
+  loadedCount = perPage; closeDrawer(); render();
 }
 function setGenre(genre) {
   activeGenre = activeGenre === genre ? null : genre;
-  currentPage = 1; closeDrawer(); render();
+  loadedCount = perPage; closeDrawer(); render();
 }
 function setCast(actor) {
   activeCast = (actor && activeCast !== actor) ? actor : null;
-  currentPage = 1; closeDrawer(); render();
+  loadedCount = perPage; closeDrawer(); render();
 }
 function onActorSearch(val) {
   const trimmed = val.trim();
   activeCast = trimmed || null;
-  currentPage = 1;
+  loadedCount = perPage;
   renderStats();
   renderList();
   // Update input styling
@@ -2830,7 +2840,7 @@ function drillTo({ filter, format, year, genre, cast }) {
   activeYear   = year   || null;
   activeGenre  = genre  || null;
   activeCast   = cast   || null;
-  currentPage  = 1;
+  loadedCount  = perPage;
   const yrSel = document.getElementById('year-sel');
   if (yrSel) yrSel.value = activeYear || '';
   switchView('collection');
@@ -2963,7 +2973,7 @@ function renderDashboard() {
         } else {
           window._decadeFilter = decade;
           activeFilter = 'owned'; activeFormat = null; activeGenre = null; activeCast = null;
-          activeYear = null; currentPage = 1;
+          activeYear = null; loadedCount = perPage;
           document.getElementById('year-sel').value = '';
           switchView('collection');
           render();
@@ -3563,6 +3573,7 @@ function clearSearchInput(inputId) {
 // ── Init ──
 load();
 render();
+initInfiniteScroll();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
