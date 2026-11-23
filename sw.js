@@ -1,4 +1,4 @@
-const CACHE = 'mediavault-v16';
+const CACHE = 'mediavault-v17';
 const PRECACHE = [
   './',
   './index.html',

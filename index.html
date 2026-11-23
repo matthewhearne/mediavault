@@ -93,7 +93,7 @@
   .search-wrap input { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 32px 8px 34px; border-radius: var(--radius); outline: none; transition: border-color 0.12s; }
   .search-wrap input:focus { border-color: var(--border-hover); }
   .search-wrap input::placeholder { color: var(--text3); }
-  .input-clear-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; line-height: 1; padding: 4px; display: none; align-items: center; z-index: 1; }
+  .input-clear-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; font-family: Arial, sans-serif; line-height: 1; padding: 0; display: none; align-items: center; justify-content: center; z-index: 1; }
   .input-clear-btn:hover { color: var(--text); }
   /* Shown only once its paired input actually has a value — pure CSS, so it
      can never end up out of sync with the field (:placeholder-shown only
@@ -537,7 +537,7 @@
         <div class="search-wrap">
           <i class="ti ti-search"></i>
           <input type="text" id="q" placeholder="Search by title…" oninput="goPage(1)">
-          <button type="button" class="input-clear-btn" onclick="clearSearchInput('q')" title="Clear"><i class="ti ti-x"></i></button>
+          <button type="button" class="input-clear-btn" onclick="clearSearchInput('q')" title="Clear">&times;</button>
         </div>
         <select class="ctrl" id="year-sel" onchange="goPage(1)">
           <option value="">All years</option>
@@ -601,7 +601,7 @@
         <div style="margin-left:auto;position:relative">
           <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
           <input id="all-actors-search" type="text" placeholder="Filter actors…" oninput="filterAllActors()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 30px 7px 30px;border-radius:var(--radius);outline:none;width:200px">
-          <button type="button" class="input-clear-btn" onclick="clearSearchInput('all-actors-search')" title="Clear"><i class="ti ti-x"></i></button>
+          <button type="button" class="input-clear-btn" onclick="clearSearchInput('all-actors-search')" title="Clear">&times;</button>
         </div>
       </div>
       <div id="all-actors-chart"></div>
@@ -613,7 +613,7 @@
         <div class="search-wrap" style="flex:1;min-width:160px">
           <i class="ti ti-search"></i>
           <input type="text" id="diary-q" placeholder="Search diary…" oninput="renderDiary()">
-          <button type="button" class="input-clear-btn" onclick="clearSearchInput('diary-q')" title="Clear"><i class="ti ti-x"></i></button>
+          <button type="button" class="input-clear-btn" onclick="clearSearchInput('diary-q')" title="Clear">&times;</button>
         </div>
         <select class="ctrl" id="diary-year-sel" onchange="renderDiary()">
           <option value="">All years</option>
@@ -655,7 +655,7 @@
           <div style="position:relative;margin-bottom:6px">
             <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
             <input id="log-coll-search" type="text" placeholder="Filter collection…" oninput="renderCollectionPicker()" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 30px 8px 32px;border-radius:var(--radius);outline:none">
-            <button type="button" class="input-clear-btn" onclick="clearSearchInput('log-coll-search')" title="Clear"><i class="ti ti-x"></i></button>
+            <button type="button" class="input-clear-btn" onclick="clearSearchInput('log-coll-search')" title="Clear">&times;</button>
           </div>
           <div class="collection-picker" id="log-coll-list"></div>
         </div>
@@ -843,7 +843,7 @@
         <div id="bs-selected-display"></div>
         <div style="position:relative">
           <input id="bs-search-input" placeholder="Search or create a box set…" oninput="onBsSearch()" autocomplete="off" style="padding-right:32px">
-          <button type="button" class="input-clear-btn" onclick="clearSearchInput('bs-search-input')" title="Clear"><i class="ti ti-x"></i></button>
+          <button type="button" class="input-clear-btn" onclick="clearSearchInput('bs-search-input')" title="Clear">&times;</button>
         </div>
         <div id="bs-search-results"></div>
       </div>
