@@ -1617,9 +1617,9 @@ function filmRowHtml(f) {
     </td>
     <td style="width:90px" class="col-format">${fmt}</td>
     <td class="col-diary" style="width:100px;white-space:nowrap">${diaryCell}</td>
-    <td class="c col-wanted" style="width:46px"><button class="icon-btn ${f.wanted?'on-wanted':''}" ${isAdmin() ? `onclick="event.stopPropagation();toggle(${f.id},'wanted')"` : 'disabled style="opacity:0.4;cursor:default"'} title="${f.wanted?'Wanted':'Mark wanted'}"><i class="ti ti-shopping-cart"></i></button></td>
-    <td class="c col-watchlist" style="width:46px"><button class="icon-btn ${f.watchlist?'on-watchlist':''}" ${isAdmin() ? `onclick="event.stopPropagation();toggle(${f.id},'watchlist')"` : 'disabled style="opacity:0.4;cursor:default"'} title="${f.watchlist?'On watchlist':'Add to watchlist'}"><i class="ti ti-bookmark"></i></button></td>
-    <td class="c col-fav" style="width:46px"><button class="icon-btn ${f.favourite?'on-favourite':''}" ${isAdmin() ? `onclick="event.stopPropagation();toggle(${f.id},'favourite')"` : 'disabled style="opacity:0.4;cursor:default"'} title="${f.favourite?'Favourite':'Mark favourite'}"><i class="ti ti-heart"></i></button></td>
+    <td class="c col-wanted" style="width:46px"><button class="icon-btn ${f.wanted?'on-wanted':''}" ${isAdmin() ? `onclick="event.stopPropagation();toggle(${f.id},'wanted')"` : 'disabled style="opacity:0.4;cursor:default"'} title="${f.wanted?'Wanted':'Mark wanted'}" aria-label="${f.wanted?'Wanted':'Mark wanted'}" aria-pressed="${!!f.wanted}"><i class="ti ti-shopping-cart"></i></button></td>
+    <td class="c col-watchlist" style="width:46px"><button class="icon-btn ${f.watchlist?'on-watchlist':''}" ${isAdmin() ? `onclick="event.stopPropagation();toggle(${f.id},'watchlist')"` : 'disabled style="opacity:0.4;cursor:default"'} title="${f.watchlist?'On watchlist':'Add to watchlist'}" aria-label="${f.watchlist?'On watchlist':'Add to watchlist'}" aria-pressed="${!!f.watchlist}"><i class="ti ti-bookmark"></i></button></td>
+    <td class="c col-fav" style="width:46px"><button class="icon-btn ${f.favourite?'on-favourite':''}" ${isAdmin() ? `onclick="event.stopPropagation();toggle(${f.id},'favourite')"` : 'disabled style="opacity:0.4;cursor:default"'} title="${f.favourite?'Favourite':'Mark favourite'}" aria-label="${f.favourite?'Favourite':'Mark favourite'}" aria-pressed="${!!f.favourite}"><i class="ti ti-heart"></i></button></td>
   </tr>`;
 }
 
@@ -1654,9 +1654,9 @@ function gridTileHtml(f) {
 const TABLE_HEAD_DESKTOP = `<thead><tr>
     <th>Film</th><th class="col-format" style="width:90px">Format</th>
     <th class="col-diary" style="width:100px">Last watched</th>
-    <th class="c col-wanted" style="width:46px" title="Wanted"><i class="ti ti-shopping-cart"></i></th>
-    <th class="c col-watchlist" style="width:46px" title="Watchlist"><i class="ti ti-bookmark"></i></th>
-    <th class="c col-fav" style="width:46px" title="Favourite"><i class="ti ti-heart"></i></th>
+    <th class="c col-wanted" style="width:46px" title="Wanted" aria-label="Wanted"><i class="ti ti-shopping-cart"></i></th>
+    <th class="c col-watchlist" style="width:46px" title="Watchlist" aria-label="Watchlist"><i class="ti ti-bookmark"></i></th>
+    <th class="c col-fav" style="width:46px" title="Favourite" aria-label="Favourite"><i class="ti ti-heart"></i></th>
   </tr></thead>`;
 
 const TABLE_HEAD_MOBILE = `<thead><tr>
