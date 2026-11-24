@@ -838,6 +838,10 @@
         </div>
       </div>
       <div class="fg">
+        <label>Runtime <span style="font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0">(minutes — per episode for TV shows)</span></label>
+        <input id="m-runtime" type="number" placeholder="e.g. 152" min="0" max="999">
+      </div>
+      <div class="fg">
         <label>Genre</label>
         <input id="m-genre" placeholder="e.g. Action, Drama" style="color:var(--text2)">
       </div>
@@ -1176,6 +1180,7 @@ async function load() {
       favourite: r.favourite,
       boxsetId: r.boxset_id,
       added: r.added,
+      runtime: r.runtime || null,
       genre: r.genre || '',
       cast: r.cast || '',
       poster: r.poster || '',
@@ -1220,8 +1225,8 @@ function loadSampleData() {
     { id: 'bs2', name: 'Dune' },
   ];
   films = [
-    {id:1,title:'Parasite',year:2019,type:'Film',format:'Blu-Ray',wanted:false,watchlist:false,favourite:true,boxsetId:null,added:Date.now()-9e6},
-    {id:2,title:'Dune: Part One',year:2021,type:'Film',format:'4K',wanted:false,watchlist:false,favourite:false,boxsetId:'bs2',added:Date.now()-8e6},
+    {id:1,title:'Parasite',year:2019,type:'Film',format:'Blu-Ray',wanted:false,watchlist:false,favourite:true,boxsetId:null,added:Date.now()-9e6,runtime:132},
+    {id:2,title:'Dune: Part One',year:2021,type:'Film',format:'4K',wanted:false,watchlist:false,favourite:false,boxsetId:'bs2',added:Date.now()-8e6,runtime:155},
     {id:3,title:'Everything Everywhere All at Once',year:2022,type:'Film',format:'Blu-Ray',wanted:false,watchlist:false,favourite:true,boxsetId:null,added:Date.now()-7e6},
     {id:4,title:'The Batman',year:2022,type:'Film',format:'4K',wanted:false,watchlist:true,favourite:false,boxsetId:null,added:Date.now()-6e6},
     {id:5,title:'Aftersun',year:2022,type:'Film',format:'DVD',wanted:false,watchlist:false,favourite:true,boxsetId:null,added:Date.now()-5e6},
@@ -1230,7 +1235,7 @@ function loadSampleData() {
     {id:8,title:'The Dark Knight',year:2008,type:'Film',format:'Blu-Ray',wanted:false,watchlist:false,favourite:true,boxsetId:'bs1',added:Date.now()-2e6},
     {id:9,title:'The Dark Knight Rises',year:2012,type:'Film',format:'Blu-Ray',wanted:false,watchlist:false,favourite:false,boxsetId:'bs1',added:Date.now()-1e6},
     {id:10,title:'Dune: Part Two',year:2024,type:'Film',format:'4K',wanted:false,watchlist:false,favourite:true,boxsetId:'bs2',added:Date.now()-5e5},
-    {id:11,title:'Breaking Bad',year:2008,type:'TV Show',format:'Blu-Ray',wanted:false,watchlist:false,favourite:true,boxsetId:null,added:Date.now()-3e5},
+    {id:11,title:'Breaking Bad',year:2008,type:'TV Show',format:'Blu-Ray',wanted:false,watchlist:false,favourite:true,boxsetId:null,added:Date.now()-3e5,runtime:47},
     {id:12,title:'Severance',year:2022,type:'TV Show',format:'',wanted:false,watchlist:true,favourite:false,boxsetId:null,added:Date.now()-2e5},
   ];
 }
@@ -1257,6 +1262,7 @@ async function saveFilmRemote(f) {
       favourite: f.favourite,
       boxset_id: f.boxsetId || null,
       added: f.added,
+      runtime: f.runtime || null,
       genre: f.genre || null,
       cast: f.cast || null,
       poster: f.poster || null,
@@ -1390,6 +1396,17 @@ function exportBackup() {
 
 // ── Filtering ──
 function isOwned(f) { return !f.wanted && !!f.format; }
+
+// "2h 16m" / "45m" / '' — used in both the list sub-line and grid tiles. For
+// TV shows the stored value is a per-episode length (TMDB doesn't expose a
+// whole-series runtime), labelled "/ep" so it isn't mistaken for a total.
+function formatRuntime(f) {
+  const mins = f && f.runtime;
+  if (!mins) return '';
+  const h = Math.floor(mins / 60), m = mins % 60;
+  const core = h ? `${h}h${m ? ' ' + m + 'm' : ''}` : `${m}m`;
+  return f.type === 'TV Show' ? `${core}/ep` : core;
+}
 
 function getFiltered() {
   const q = (document.getElementById('q').value || '').toLowerCase();
@@ -1588,7 +1605,7 @@ function filmRowHtml(f) {
   const posterThumb = f.poster
     ? `<img src="${f.poster}" alt="" style="width:28px;height:42px;object-fit:cover;border-radius:3px;flex-shrink:0;margin-right:4px">`
     : '';
-  const subParts = [f.year, f.genre].filter(Boolean);
+  const subParts = [f.year, formatRuntime(f), f.genre].filter(Boolean);
   const sub = subParts.length ? `<div class="film-sub">${subParts.join(' · ')}</div>` : '';
   const castLine = f.cast ? `<div class="film-sub" style="color:var(--text3)">${f.cast}</div>` : '';
   const fmtInline = fmt ? `<span class="fmt-inline">${fmt}</span>` : '';
@@ -1645,7 +1662,7 @@ function gridTileHtml(f) {
     </div>
     <div class="grid-tile-info">
       <div class="grid-tile-title">${f.title}</div>
-      <div class="grid-tile-year">${f.year || ''}</div>
+      <div class="grid-tile-year">${[f.year, formatRuntime(f)].filter(Boolean).join(' · ')}</div>
       ${f.genre ? `<div class="grid-tile-genre">${f.genre}</div>` : ''}
     </div>
   </div>`;
@@ -2047,9 +2064,17 @@ async function applyTmdbSelection(item) {
     const genre = (detail.genres || []).map(g => g.name).join(', ');
     const credits = detail.credits || {};
     const cast = (credits.cast || []).slice(0, 5).map(c => c.name).join(', ');
+    // Movies carry a single total runtime. TV shows only expose per-episode
+    // length (episode_run_time, usually one value but technically an array) —
+    // there's no "whole series" runtime to pull from TMDB, so that's what we
+    // store and label it accordingly in the UI.
+    const runtime = item.mediaType === 'tv'
+      ? (detail.episode_run_time || [])[0] || null
+      : detail.runtime || null;
 
     document.getElementById('m-genre').value = genre;
     document.getElementById('m-cast').value = cast;
+    if (runtime) document.getElementById('m-runtime').value = runtime;
 
     // Update preview
     wrap.innerHTML = tmdbSelectedHtml({
@@ -2133,6 +2158,7 @@ function openAddFilm() {
   document.getElementById('m-year').value = '';
   document.getElementById('m-type').value = 'Film';
   document.getElementById('m-format').value = '';
+  document.getElementById('m-runtime').value = '';
   document.getElementById('m-genre').value = '';
   document.getElementById('m-cast').value = '';
   document.getElementById('m-wanted').checked = false;
@@ -2182,6 +2208,7 @@ function openEditFilm(id) {
   document.getElementById('m-year').value = f.year || '';
   document.getElementById('m-type').value = f.type || 'Film';
   document.getElementById('m-format').value = f.format || '';
+  document.getElementById('m-runtime').value = f.runtime || '';
   document.getElementById('m-genre').value = f.genre || '';
   document.getElementById('m-cast').value = f.cast || '';
   document.getElementById('m-wanted').checked = !!f.wanted;
@@ -2243,6 +2270,7 @@ function saveFilm() {
     year:      parseInt(document.getElementById('m-year').value) || null,
     type:      document.getElementById('m-type').value || 'Film',
     format:    document.getElementById('m-format').value || null,
+    runtime:   parseInt(document.getElementById('m-runtime').value) || null,
     genre:     document.getElementById('m-genre').value.trim() || null,
     cast:      document.getElementById('m-cast').value.trim() || null,
     poster:    document.getElementById('tmdb-btn').dataset.poster || null,
