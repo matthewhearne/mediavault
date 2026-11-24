@@ -554,6 +554,7 @@
         <div class="auth-menu" id="auth-menu" style="display:none">
           <div class="auth-menu-name" id="auth-menu-name"></div>
           <button class="auth-menu-item" onclick="exportBackup()"><i class="ti ti-download"></i> Export backup (CSV)</button>
+          <button class="auth-menu-item" onclick="backfillRuntime()"><i class="ti ti-clock-play"></i> Backfill runtime</button>
           <button class="auth-menu-item" onclick="signOut()"><i class="ti ti-logout"></i> Sign out</button>
         </div>
       </div>
@@ -2145,6 +2146,70 @@ async function tmdbQuickSearch(title) {
     return exact;
   } catch (e) {
     return [];
+  }
+}
+
+// ── One-time backfill: fill in runtime for existing items that don't have one ──
+// Items in the collection only store title/year/type, not a TMDB id, so each one
+// missing a runtime is re-matched to TMDB the same cautious way barcode scanning
+// already does: an exact title match (via tmdbQuickSearch), narrowed to the right
+// mediaType (Film → movie, TV Show → tv), and — if more than one title+type match
+// still remains — narrowed further by year (within 1, to allow for release vs. air
+// date differences). Anything that still isn't down to exactly one match is left
+// alone and reported rather than guessed, so a backfill run never silently attaches
+// the wrong film's runtime to a title (e.g. one of several "Maverick"s).
+async function backfillRuntime() {
+  if (!isAdmin()) return;
+  const targets = films.filter(f => !f.runtime);
+  if (!targets.length) { showToast('Every item already has a runtime.'); return; }
+  if (!confirm(`Look up TMDB runtime for ${targets.length} item${targets.length === 1 ? '' : 's'} that don't have one yet? This looks each one up against TMDB and may take a minute or two.`)) return;
+
+  let updated = 0;
+  const skipped = [];
+
+  for (let i = 0; i < targets.length; i++) {
+    const f = targets[i];
+    showToast(`Backfilling runtime… ${i + 1}/${targets.length}`);
+    try {
+      const wantType = f.type === 'TV Show' ? 'tv' : 'movie';
+      let candidates = (await tmdbQuickSearch(f.title)).filter(r => r.mediaType === wantType);
+
+      if (candidates.length > 1 && f.year) {
+        const yr = parseInt(f.year);
+        const byYear = candidates.filter(r => r.year && Math.abs(parseInt(r.year) - yr) <= 1);
+        if (byYear.length) candidates = byYear;
+      }
+
+      if (candidates.length !== 1) { skipped.push(f.title); continue; }
+
+      const match = candidates[0];
+      const endpoint = wantType === 'tv'
+        ? `https://api.themoviedb.org/3/tv/${match.id}?api_key=${TMDB_KEY}`
+        : `https://api.themoviedb.org/3/movie/${match.id}?api_key=${TMDB_KEY}`;
+      const detail = await (await fetch(endpoint)).json();
+      const runtime = wantType === 'tv' ? (detail.episode_run_time || [])[0] || null : detail.runtime || null;
+
+      if (!runtime) { skipped.push(f.title); continue; }
+
+      f.runtime = runtime;
+      await saveFilmRemote(f);
+      updated++;
+    } catch(e) {
+      console.warn('Runtime backfill failed for', f.title, e);
+      skipped.push(f.title);
+    }
+    // Small pause between items to stay gentle on TMDB's API.
+    await new Promise(r => setTimeout(r, 250));
+  }
+
+  saveLocal();
+  render();
+
+  if (skipped.length) {
+    const shown = skipped.slice(0, 20).join(', ') + (skipped.length > 20 ? `, and ${skipped.length - 20} more` : '');
+    alert(`Runtime backfill done — ${updated} updated, ${skipped.length} skipped (no single confident TMDB match):\n\n${shown}\n\nThese can still be filled in individually via Edit → Look up.`);
+  } else {
+    showToast(`Runtime backfill done — ${updated} updated.`);
   }
 }
 
